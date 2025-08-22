@@ -1,0 +1,105 @@
+# dad_player/kv/main_screen.kv
+
+<MainScreen>:
+    MDScreenManager:
+        id: layout_manager
+
+        # --- DESKTOP LAYOUT SCREEN ---
+        MDScreen:
+            name: 'desktop_layout'
+
+            MDBoxLayout:
+                orientation: 'vertical'
+
+                MDTopAppBar:
+                    id: desktop_app_bar
+                    title: root.top_bar_title
+                    elevation: 4
+                    pos_hint: {"top": 1}
+                    anchor_title: "left"
+                    left_action_items: [["menu", lambda x: nav_drawer.set_state("open")]]
+
+                MDBoxLayout:
+                    orientation: 'horizontal'
+
+                    MDNavigationRail:
+                        id: nav_rail
+                        md_bg_color: app.theme_cls.bg_dark
+                        MDNavigationRailItem:
+                            name: "now_playing_screen"
+                            text: "Playing"
+                            icon: "play-circle-outline"
+                            on_release: root.switch_view("now_playing_screen")
+                        MDNavigationRailItem:
+                            name: "library_screen"
+                            text: "Library"
+                            icon: "music-box-multiple"
+                            on_release: root.switch_view("library_screen")
+                        MDNavigationRailItem:
+                            name: "playlist_screen"
+                            text: "Playlist"
+                            icon: "playlist-music-outline"
+                            on_release: root.switch_view("playlist_screen")
+
+                    MDScreenManager:
+                        id: desktop_screen_manager
+                        MDScreen:
+                            name: 'now_playing_screen'
+                        MDScreen:
+                            name: 'library_screen'
+                        MDScreen:
+                            name: 'playlist_screen'
+
+        # --- MOBILE LAYOUT SCREEN ---
+        MDScreen:
+            name: 'mobile_layout'
+
+            MDBoxLayout:
+                orientation: 'vertical'
+
+                MDTopAppBar:
+                    id: mobile_app_bar
+                    title: root.top_bar_title
+                    elevation: 4
+                    pos_hint: {"top": 1}
+                    anchor_title: "center"
+                    left_action_items: [["menu", lambda x: nav_drawer.set_state("open")]]
+
+                MDBottomNavigation:
+                    id: bottom_nav
+                    selected_color_background: app.theme_cls.primary_color
+                    panel_color: app.theme_cls.bg_dark
+                    on_switch_tabs: root.on_switch_tabs(*args)
+
+                    MDBottomNavigationItem:
+                        name: 'now_playing_screen'
+                        text: 'Playing'
+                        icon: 'play'
+                        id: mobile_now_playing_screen
+
+                    MDBottomNavigationItem:
+                        name: 'library_screen'
+                        text: 'Library'
+                        icon: 'music-box-multiple'
+                        id: mobile_library_screen
+
+                    MDBottomNavigationItem:
+                        name: 'playlist_screen'
+                        text: 'Playlist'
+                        icon: 'playlist-music-outline'
+                        id: mobile_playlist_screen
+
+    MDNavigationDrawer:
+        id: nav_drawer
+        MDNavigationDrawerMenu:
+            MDNavigationDrawerHeader:
+                title: "Harmony Player"
+                spacing: "4dp"
+                padding: "12dp", 0, 0, "32dp"
+
+            MDNavigationDrawerItem:
+                icon: "cog"
+                text: "Settings"
+                on_release:
+                    nav_drawer.set_state("close")
+                    app.switch_screen('settings_screen')

@@ -1,0 +1,35 @@
+# dad_player/kv/widgets/song_row_item.kv
+
+<SongRowItem>:
+    orientation: 'horizontal'
+    size_hint_y: None
+    height: dp(64)
+    padding: [dp(8), 0, dp(8), 0]
+    spacing: dp(16)
+
+    Image:
+        source: root.art_path
+        size_hint: None, 1
+        width: dp(48)
+
+    MDLabel:
+        text: root.text
+        size_hint_x: 0.5
+        shorten: True
+        shorten_from: 'right'
+        pos_hint: {'center_y': 0.5}
+
+    MDLabel:
+        text: root.secondary_text
+        size_hint_x: 0.3
+        shorten: True
+        shorten_from: 'right'
+        theme_text_color: 'Secondary'
+        pos_hint: {'center_y': 0.5}
+
+    MDLabel:
+        text: root.tertiary_text
+        size_hint_x: 0.2
+        halign: 'right'
+        theme_text_color: 'Secondary'
+        pos_hint: {'center_y': 0.5}

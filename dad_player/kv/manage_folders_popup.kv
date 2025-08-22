@@ -1,0 +1,138 @@
+# dad_player/kv/manage_folders_popup.kv
+
+#:kivy 2.3.1
+#:import utils dad_player.utils
+#:import FileChooserListView kivy.uix.filechooser.FileChooserListView
+#:import os os
+
+<FolderChooserPopup>:
+    title: "Select Music Folder"
+    size_hint: 0.9, 0.9
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: 'vertical'
+        spacing: dp(5)
+        padding: dp(5)
+
+        Label:
+            text: "Navigate to your music folder and select it from the list below."
+            size_hint_y: None
+            height: self.texture_size[1]
+            font_size: '13sp'
+            padding: [dp(5), dp(5)]
+            text_size: self.width - dp(10), None
+            halign: 'center'
+
+        FileChooserListView:
+            id: folder_chooser_fc
+            dirselect: True
+            filters: [lambda folder, filename: os.path.isdir(os.path.join(folder, filename))]
+            padding: dp(5)
+            canvas.before:
+                Color:
+                    rgba: 0.1, 0.1, 0.1, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: dp(48)
+            spacing: dp(10)
+            padding: dp(5), 0 
+
+            Button:
+                text: "Select This Folder"
+                font_size: '14sp'
+                on_release: root._on_select_folder()
+            Button:
+                text: "Cancel"
+                font_size: '14sp'
+                on_release: root.dismiss()
+
+<FolderListItem@BoxLayout>:
+    path: ''
+    root_popup: None
+    size_hint_y: None
+    height: '40sp'
+    spacing: dp(8)
+    padding: dp(5)
+
+    Label:
+        text: root.path 
+        font_size: '13sp'
+        halign: 'left'
+        valign: 'middle'
+        shorten: True
+        shorten_from: 'left'
+        text_size: self.width - dp(90), None
+    Button:
+        text: "Remove"
+        font_size: '12sp'
+        size_hint_x: None
+        width: dp(90)
+        on_release: if root.root_popup: root.root_popup.remove_folder_from_list_item(root.path)
+        background_color: [0.8, 0.4, 0.4, 1]
+        background_normal: ''
+
+<ManageFoldersPopup>:
+    title: "Manage Music Folders"
+    size_hint: 0.9, 0.85
+    auto_dismiss: False
+
+    BoxLayout:
+        orientation: 'vertical'
+        padding: dp(10)
+        spacing: dp(10)
+
+        Label:
+            text: "Current Music Folders:"
+            font_size: '16sp'
+            size_hint_y: None
+            height: dp(30)
+            bold: True
+            halign: 'left'
+            text_size: self.width, None
+
+        RecycleView:
+            id: folders_rv
+            viewclass: 'FolderListItem'
+            scroll_type: ['bars', 'content']
+            bar_width: dp(10)
+            size_hint_y: 1
+
+            RecycleBoxLayout:
+                orientation: 'vertical'
+                default_size: None, '40sp'
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                padding: dp(2)
+                spacing: dp(3)
+    
+        Label:
+            id: manage_folders_status_label
+            text: root.status_message
+            font_size: '12sp'
+            color: [0.9, 0.7, 0.3, 1]
+            size_hint_y: None
+            height: self.texture_size[1] if root.status_message else 0
+            opacity: 1 if root.status_message else 0
+            padding: [0, dp(5)]
+
+        Button:
+            text: "Add New Folder..."
+            font_size: '14sp'
+            size_hint_y: None
+            height: dp(44)
+            on_release: root.open_folder_chooser()
+            background_color: [0.3, 0.6, 0.3, 1]
+            background_normal: ''
+
+        Button:
+            text: "Close"
+            font_size: '14sp'
+            size_hint_y: None
+            height: dp(44)
+            on_release: root.dismiss()

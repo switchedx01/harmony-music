@@ -1,0 +1,180 @@
+# dad_player/kv/screens/now_playing_view.kv
+
+<NowPlayingView>:
+    orientation: 'vertical'
+    padding: "16dp"
+    spacing: "8dp"
+
+    canvas.before:
+        Color:
+            rgba: root.theme_cls.bg_normal
+        Rectangle:
+            size: self.size
+            pos: self.pos
+        Color:
+            rgba: 1, 1, 1, 0.5
+        Rectangle:
+            texture: root.blurred_bg_texture
+            size: self.size
+            pos: self.pos
+
+    MDCard:
+        id: album_art_card
+        radius: [16]
+        elevation: 8
+        size_hint_y: 1
+        md_bg_color: 0, 0, 0, 0
+
+        MDRelativeLayout:
+            Image:
+                id: album_art_np
+                texture: root.album_art_texture
+                fit_mode: "contain"
+
+            MDBoxLayout:
+                orientation: 'vertical'
+                adaptive_height: True
+                pos_hint: {'center_x': 0.5, 'bottom': 1}
+                padding: "8dp"
+                md_bg_color: 0, 0, 0, 0.5
+                opacity: root.artist_overlay_opacity
+
+                MDLabel:
+                    text: root.artist_name_text
+                    font_style: "H6"
+                    halign: 'center'
+                    bold: True
+                    adaptive_height: True
+                    shorten: True
+                    shorten_from: 'right'
+
+    MDBoxLayout:
+        orientation: 'vertical'
+        adaptive_height: True
+        spacing: "0dp"
+
+        MDRelativeLayout:
+            size_hint_y: None
+            height: "48dp"
+
+            MDBoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: "48dp"
+                spacing: "8dp"
+                padding: [0, "8dp"]
+                pos_hint: {'center_y': 0.5}
+
+                MDLabel:
+                    text: root.current_time_text
+                    font_style: "Caption"
+                    theme_text_color: "Secondary"
+                    size_hint_x: None
+                    width: "40dp"
+                    pos_hint: {'center_y': 0.5}
+
+                MDSlider:
+                    id: progress_slider
+                    max: root.progress_slider_max
+                    value: root.progress_slider_value
+                    thumb_size_up: '24sp'
+                    thumb_size_down: '36sp'
+                    pos_hint: {'center_y': 0.5}
+                    hint: False
+                    on_touch_down: root.start_seek(self, args[1])
+                    on_touch_move: root.update_seek_label(self, args[1])
+                    on_touch_up: root.end_seek(self, args[1])
+                    color: root.theme_cls.primary_color
+
+                MDLabel:
+                    text: root.total_time_text
+                    font_style: "Caption"
+                    theme_text_color: "Secondary"
+                    size_hint_x: None
+                    width: "40dp"
+                    halign: 'right'
+                    pos_hint: {'center_y': 0.5}
+            
+            MDLabel:
+                id: seeker_hint_label
+                font_style: "Caption"
+                theme_text_color: "Primary"
+                halign: 'center'
+                size_hint: None, None
+                size: self.texture_size
+                pos_hint: {'center_x': progress_slider.value_pos[0] if progress_slider.max > 0 else 0.5}
+                y: progress_slider.top + dp(4)
+                opacity: 0
+                canvas.before:
+                    Color:
+                        rgba: root.theme_cls.primary_light
+                    RoundedRectangle:
+                        size: self.size[0] + dp(12), self.size[1] + dp(4)
+                        pos: self.x - dp(6), self.y - dp(2)
+                        radius: [dp(4)]
+
+        MDBoxLayout:
+            adaptive_height: True
+            size_hint_x: None
+            width: self.minimum_width
+            pos_hint: {'center_x': 0.5}
+            spacing: "8dp"
+            padding: [0, "4dp"]
+
+            MDIconButton:
+                icon: "shuffle-variant"
+                on_release: root.on_shuffle_button_press()
+                theme_text_color: "Primary" if root.shuffle_enabled else "Secondary"
+                icon_size: "24sp"
+
+            MDIconButton:
+                icon: "skip-previous"
+                on_release: root.on_previous_button_press()
+                icon_size: "36sp"
+
+            MDIconButton:
+                icon: root.play_pause_icon_text
+                on_release: root.on_play_pause_button_press()
+                icon_size: "56sp"
+                pos_hint: {'center_y': 0.5}
+                theme_text_color: "Primary"
+
+            MDIconButton:
+                icon: "skip-next"
+                on_release: root.on_next_button_press()
+                icon_size: "36sp"
+
+            MDIconButton:
+                icon: root.repeat_mode_icon
+                on_release: root.on_repeat_button_press()
+                theme_text_color: "Primary" if root.repeat_mode_icon != 'repeat-off' else "Secondary"
+                icon_size: "24sp"
+
+        MDBoxLayout:
+            size_hint_y: None
+            height: "48dp"
+            spacing: "10dp"
+            pos_hint: {'center_x': 0.5}
+
+            MDIconButton:
+                icon: "volume-medium"
+                theme_text_color: "Secondary"
+                icon_size: "22sp"
+                pos_hint: {'center_y': 0.5}
+
+            MDSlider:
+                id: volume_slider
+                min: 0
+                max: 100
+                value: root.volume_slider_value
+                thumb_size_up: '20sp'
+                thumb_size_down: '28sp'
+                on_value: root.handle_volume_change(self)
+                color: root.theme_cls.primary_color
+                pos_hint: {'center_y': 0.5}
+
+            MDIconButton:
+                icon: "volume-high"
+                theme_text_color: "Secondary"
+                icon_size: "22sp"
+                pos_hint: {'center_y': 0.5}

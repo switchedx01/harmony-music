@@ -1,0 +1,69 @@
+# dad_player/kv/common_widgets.kv
+
+#:import dp kivy.metrics.dp
+#:import ImageLeftWidget kivymd.uix.list.ImageLeftWidget
+
+<AlbumGridItem>:
+    size_hint_y: None
+    height: self.width
+    md_bg_color: app.theme_cls.bg_light
+    elevation: 4
+    shadow_softness: 4
+    radius: [12,]
+    ripple_behavior: True
+    on_release: root.on_press_callback()
+    padding: 0
+
+    MDRelativeLayout:
+
+        FitImage:
+            source: root.art_path
+            radius: [12,]
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            size_hint_y: None
+            height: dp(56)
+            pos_hint: {'y': 0}
+            padding: "8dp"
+            spacing: "2dp"
+            md_bg_color: 0, 0, 0, 0.6
+            radius: [0, 0, 12, 12]
+
+            MDLabel:
+                text: root.album_name
+                halign: 'center'
+                font_style: "Button"
+                shorten: True
+                shorten_from: 'right'
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+
+            MDLabel:
+                text: root.artist_name
+                halign: 'center'
+                font_style: "Caption"
+                shorten: True
+                shorten_from: 'right'
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 0.7
+
+<ArtistListItem>:
+    adaptive_height: True
+    padding: "16dp"
+    spacing: "16dp"
+    ripple_behavior: True
+    on_release: root.on_press_callback() if root.on_press_callback else None
+
+    MDLabel:
+        text: root.artist_name
+        font_style: "Body1"
+
+<SongListItem>:
+    on_release: root.on_press_callback() if root.on_press_callback else None
+    _no_ripple_effect: True
+    theme_bg_color: "Custom"
+    md_bg_color: app.theme_cls.primary_light if root.is_playing else (0,0,0,0)
+
+    ImageLeftWidget:
+        source: root.art_path

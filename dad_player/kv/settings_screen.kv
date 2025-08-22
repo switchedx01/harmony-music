@@ -1,0 +1,67 @@
+# dad_player/kv/settings_screen.kv
+
+#:import CustomSettingsPanel dad_player.ui.widgets.settings_panel.CustomSettingsPanel
+#:import MDSwitch kivymd.uix.selectioncontrol.MDSwitch
+#:import MDLabel kivymd.uix.label.MDLabel
+#:import MDRaisedButton kivymd.uix.button.MDRaisedButton
+#:import dp kivy.metrics.dp
+
+<SettingsScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        MDTopAppBar:
+            title: "Settings"
+            elevation: 4
+            left_action_items: [["arrow-left", lambda x: app.switch_screen('main_screen')]]
+
+        ScrollView:
+            CustomSettingsPanel:
+                settings_manager: root.settings_manager
+                library_manager: root.library_manager
+
+<CustomSettingsPanel>:
+    cols: 1
+    adaptive_height: True
+    padding: dp(16)
+    spacing: dp(16)
+
+    MDBoxLayout:
+        adaptive_height: True
+        spacing: dp(8)
+
+        MDLabel:
+            text: "Autoplay"
+            size_hint_x: 0.7
+        MDSwitch:
+            active: root.autoplay_active
+            on_active: root.autoplay_active = self.active
+
+    MDBoxLayout:
+        adaptive_height: True
+        spacing: dp(8)
+
+        MDLabel:
+            text: "Shuffle"
+            size_hint_x: 0.7
+        MDSwitch:
+            active: root.shuffle_active
+            on_active: root.shuffle_active = self.active
+
+    MDRaisedButton:
+        text: root.repeat_mode_text
+        size_hint_y: None
+        height: dp(48)
+        on_release: root.cycle_repeat_mode()
+
+    MDRaisedButton:
+        text: "Manage Music Folders"
+        size_hint_y: None
+        height: dp(48)
+        on_release: root.open_manage_folders_popup()
+
+    MDRaisedButton:
+        text: "Scan Library"
+        size_hint_y: None
+        height: dp(48)
+        on_release: root.start_library_scan()
