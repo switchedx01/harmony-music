@@ -4,6 +4,6 @@ from setuptools import setup, find_packages
 
 setup(
     name="harmony_player",
-    version="3.3.4",
+    version="0.0.4",
     packages=find_packages(),
 )
