@@ -51,7 +51,15 @@ class PlayerEngine(EventDispatcher):
         self.event_manager = self.player.event_manager()
         self._bind_vlc_events()
         self.settings_manager.bind(on_setting_changed=self._on_setting_changed)
-        self.set_volume(self.settings_manager.get_last_volume() * 100)
+        
+        last_volume_fraction = self.settings_manager.get_last_volume()
+
+        if last_volume_fraction == 0.0:
+            initial_volume_percent = 50
+        else:
+            initial_volume_percent = last_volume_fraction * 100
+        
+        self.set_volume(initial_volume_percent)
 
         initial_queue = self.playlist_manager.get_tracks_for_playlist("Queue")
         if initial_queue:
