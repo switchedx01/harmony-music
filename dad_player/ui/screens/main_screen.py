@@ -3,24 +3,26 @@
 import logging
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.metrics import dp
 from kivy.properties import ObjectProperty, StringProperty
 from kivymd.uix.screen import MDScreen
 
 log = logging.getLogger(__name__)
 
-LAYOUT_BREAKPOINT = 600
+LAYOUT_BREAKPOINT = dp(600)  # Use dp for density-independent threshold
 
 class MainScreen(MDScreen):
     player_engine = ObjectProperty(None)
     library_manager = ObjectProperty(None)
     settings_manager = ObjectProperty(None)
-    playlist_manager = ObjectProperty(None) # Add this line
+    playlist_manager = ObjectProperty(None)
     top_bar_title = StringProperty("DaD Player")
 
     def __init__(self, **kwargs):
         self._views = {}
         self._current_layout = None
         self._is_initialized = False
+        self.current_sub_view = "library_screen"  # Initial default; updated by user interactions
         super().__init__(**kwargs)
         
     def on_enter(self, *args):
@@ -51,7 +53,7 @@ class MainScreen(MDScreen):
             if 'layout_manager' in self.ids:
                 self.ids.layout_manager.current = f'{new_layout}_layout'
                 self._transfer_views()
-                self._select_default_view()
+                self._restore_active_view()
             else:
                 log.error("CRITICAL: 'layout_manager' not found in ids. UI cannot switch layouts.")
 
@@ -85,7 +87,7 @@ class MainScreen(MDScreen):
             "playlist_screen": PlaylistView(
                 player_engine=self.player_engine, 
                 library_manager=self.library_manager,
-                playlist_manager=self.playlist_manager # Add this line
+                playlist_manager=self.playlist_manager
             ),
         }
         log.info("Main views have been instantiated.")
@@ -122,18 +124,28 @@ class MainScreen(MDScreen):
                 else:
                     log.error(f"Mobile container for '{screen_name}' not found for view transfer.")
 
-    def _select_default_view(self):
-        def select_mobile(dt):
+    def _restore_active_view(self):
+        def restore_mobile(dt):
             if 'bottom_nav' in self.ids:
-                self.ids.bottom_nav.switch_tab("library_screen")
+                self.ids.bottom_nav.switch_tab(self.current_sub_view)
         
-        def select_desktop(dt):
-            self.switch_view("library_screen")
-            
+        def restore_desktop(dt):
+            if self.ids.desktop_screen_manager.has_screen(self.current_sub_view):
+                self.ids.desktop_screen_manager.current = self.current_sub_view
+                if 'nav_rail' in self.ids:
+                    nav_rail = self.ids.nav_rail
+                    for item in nav_rail.children:
+                        if hasattr(item, 'name') and item.name == self.current_sub_view:
+                            nav_rail.set_active_item(item)
+                            break
+        
         if self._current_layout == 'mobile':
-            Clock.schedule_once(select_mobile)
+            Clock.schedule_once(restore_mobile)
         else:
-            Clock.schedule_once(select_desktop)
+            Clock.schedule_once(restore_desktop)
+        
+        if self.current_sub_view == "library_screen":
+            self.refresh_visible_library_content()
 
     def switch_view(self, screen_name: str):
         if self._current_layout == 'desktop':
@@ -149,8 +161,10 @@ class MainScreen(MDScreen):
                     self.refresh_visible_library_content()
             else:
                 log.error(f"Attempted to switch to non-existent desktop view: {screen_name}")
+        self.current_sub_view = screen_name  # Update state
 
     def on_switch_tabs(self, instance_tabs, instance_tab, instance_tab_label=None, tab_text=None):
+        self.current_sub_view = instance_tab.name  # Update state
         if instance_tab.name == "library_screen":
             self.refresh_visible_library_content()
 
