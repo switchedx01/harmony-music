@@ -1,9 +1,5 @@
 # dad_player/core/exceptions.py
 
-"""
-Custom exceptions for the DaD Player application.
-"""
-
 class DadPlayerError(Exception):
     """Base exception class for all application-specific errors."""
     pass
@@ -26,6 +22,15 @@ class MediaLoadError(DadPlayerError):
     """Raised when a media file fails to load."""
     pass
 
-class VlcInitializationError(Exception):
-    def __init__(self, message="VLC initialization failed"):
-        super().__init__(message)
+# --- Playlist Errors ---
+class PlaylistError(DadPlayerError):
+    """Base exception for playlist-related operations."""
+    pass
+
+class PlaylistExistsError(PlaylistError):
+    """Raised when trying to create a playlist that already exists."""
+    pass
+
+class PlaylistNotFoundError(PlaylistError):
+    """Raised when a specified playlist cannot be found."""
+    pass
