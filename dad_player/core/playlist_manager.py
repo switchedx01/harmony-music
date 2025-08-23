@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from kivy.event import EventDispatcher
 from kivy.properties import ListProperty, DictProperty
+
 from dad_player.core.exceptions import PlaylistError, PlaylistExistsError, PlaylistNotFoundError
 from dad_player.utils.file_utils import get_user_data_dir_for_app
 
@@ -12,16 +13,17 @@ log = logging.getLogger(__name__)
 
 PLAYLISTS_FILENAME = "playlists.json"
 QUEUE_PLAYLIST_NAME = "Queue"
+RECENTS_PLAYLIST_NAME = "Recents"
+RECENTS_MAX_SIZE = 30
 
 
 class PlaylistManager(EventDispatcher):
     """
     Manages loading, saving, and manipulation of all playlists, including the
-    special 'Queue' playlist. Acts as the single source of truth for playlist data.
+    special 'Queue' and 'Recents' playlists.
     """
     __events__ = ('on_playlists_changed',)
 
-    # Public properties that the UI can bind to.
     playlist_names = ListProperty([])
     playlists = DictProperty({})
 
@@ -40,13 +42,14 @@ class PlaylistManager(EventDispatcher):
                     self.playlists = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
                 log.error(f"Failed to load or parse playlists file: {e}")
-                self.playlists = {}  # Start fresh if file is corrupt
+                self.playlists = {}
         else:
             self.playlists = {}
 
-        # Ensure the persistent queue always exists.
         if QUEUE_PLAYLIST_NAME not in self.playlists:
             self.playlists[QUEUE_PLAYLIST_NAME] = []
+        if RECENTS_PLAYLIST_NAME not in self.playlists:
+            self.playlists[RECENTS_PLAYLIST_NAME] = []
 
         self._update_public_properties()
         log.info(f"Loaded {len(self.playlist_names)} user playlists.")
@@ -55,38 +58,27 @@ class PlaylistManager(EventDispatcher):
     def _save_playlists(self):
         """Saves the current state of all playlists to the JSON file."""
         try:
-            # Create parent directory if it doesn't exist
             self._playlists_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self._playlists_path, 'w', encoding='utf-8') as f:
                 json.dump(self.playlists, f, indent=4)
-            # Dispatch event after a successful save
             self.dispatch('on_playlists_changed')
         except IOError as e:
             log.error(f"Failed to save playlists to {self._playlists_path}: {e}")
-            # Optionally, raise a specific error here to be caught by the app's global error handler
             raise PlaylistError(f"Could not save playlists: {e}")
 
     def _update_public_properties(self):
         """Updates the ListProperty of names for UI binding."""
-        # The UI should only see user-created playlists in this list.
+        special_lists = [QUEUE_PLAYLIST_NAME, RECENTS_PLAYLIST_NAME]
         self.playlist_names = sorted(
-            [p for p in self.playlists.keys() if p != QUEUE_PLAYLIST_NAME]
+            [p for p in self.playlists.keys() if p not in special_lists]
         )
 
     def create_playlist(self, name: str):
-        """
-        Creates a new, empty playlist.
-
-        Args:
-            name (str): The name for the new playlist.
-
-        Raises:
-            PlaylistExistsError: If a playlist with the same name already exists.
-        """
+        """Creates a new, empty playlist."""
         if not name or name.strip() == "":
             raise ValueError("Playlist name cannot be empty.")
-        if name == QUEUE_PLAYLIST_NAME or name in self.playlists:
-            raise PlaylistExistsError(f"Playlist '{name}' already exists.")
+        if name in [QUEUE_PLAYLIST_NAME, RECENTS_PLAYLIST_NAME] or name in self.playlists:
+            raise PlaylistExistsError(f"Playlist '{name}' is a reserved name or already exists.")
 
         log.info(f"Creating new playlist: {name}")
         self.playlists[name] = []
@@ -94,17 +86,9 @@ class PlaylistManager(EventDispatcher):
         self._save_playlists()
 
     def delete_playlist(self, name: str):
-        """
-        Deletes a user-created playlist.
-
-        Args:
-            name (str): The name of the playlist to delete.
-
-        Raises:
-            PlaylistNotFoundError: If the playlist does not exist.
-        """
-        if name == QUEUE_PLAYLIST_NAME:
-            log.warning("Attempted to delete the special 'Queue' playlist. Operation aborted.")
+        """Deletes a user-created playlist."""
+        if name in [QUEUE_PLAYLIST_NAME, RECENTS_PLAYLIST_NAME]:
+            log.warning(f"Attempted to delete the special '{name}' playlist. Operation aborted.")
             return
         if name not in self.playlists:
             raise PlaylistNotFoundError(f"Playlist '{name}' not found.")
@@ -114,44 +98,39 @@ class PlaylistManager(EventDispatcher):
         self._update_public_properties()
         self._save_playlists()
 
+    def add_track_to_recents(self, filepath: str):
+        """Adds a track to the top of the recently played list."""
+        recents = self.playlists.get(RECENTS_PLAYLIST_NAME, [])
+        if filepath in recents:
+            recents.remove(filepath)
+        
+        recents.insert(0, filepath)
+        
+        self.playlists[RECENTS_PLAYLIST_NAME] = recents[:RECENTS_MAX_SIZE]
+        
+        try:
+            with open(self._playlists_path, 'w', encoding='utf-8') as f:
+                json.dump(self.playlists, f, indent=4)
+        except IOError as e:
+            log.error(f"Failed to save recents state: {e}")
+
     def add_track_to_playlist(self, playlist_name: str, filepath: str):
-        """
-        Adds a track to a specified playlist.
-
-        Args:
-            playlist_name (str): The name of the target playlist.
-            filepath (str): The file path of the track to add.
-
-        Raises:
-            PlaylistNotFoundError: If the playlist does not exist.
-        """
+        """Adds a track to a specified user playlist."""
         if playlist_name not in self.playlists:
             raise PlaylistNotFoundError(f"Playlist '{playlist_name}' not found.")
         
-        # Avoid duplicates
         if filepath not in self.playlists[playlist_name]:
-            log.info(f"Adding track '{filepath}' to playlist '{playlist_name}'.")
             self.playlists[playlist_name].append(filepath)
             self._save_playlists()
         else:
             log.warning(f"Track '{filepath}' already exists in playlist '{playlist_name}'.")
 
     def remove_track_from_playlist(self, playlist_name: str, filepath: str):
-        """
-        Removes a track from a specified playlist.
-
-        Args:
-            playlist_name (str): The name of the target playlist.
-            filepath (str): The file path of the track to remove.
-
-        Raises:
-            PlaylistNotFoundError: If the playlist does not exist.
-        """
+        """Removes a track from a specified playlist."""
         if playlist_name not in self.playlists:
             raise PlaylistNotFoundError(f"Playlist '{playlist_name}' not found.")
         
         if filepath in self.playlists[playlist_name]:
-            log.info(f"Removing track '{filepath}' from playlist '{playlist_name}'.")
             self.playlists[playlist_name].remove(filepath)
             self._save_playlists()
         else:
@@ -160,30 +139,17 @@ class PlaylistManager(EventDispatcher):
     def save_queue(self, filepaths: list):
         """Persistently saves the current playing queue."""
         self.playlists[QUEUE_PLAYLIST_NAME] = filepaths
-        # Note: We don't dispatch 'on_playlists_changed' for queue updates
-        # to avoid unnecessary UI refreshes of the playlist list itself.
-        # The player_engine's on_playlist_changed event handles the queue view update.
         try:
             with open(self._playlists_path, 'w', encoding='utf-8') as f:
                 json.dump(self.playlists, f, indent=4)
         except IOError as e:
             log.error(f"Failed to save queue state: {e}")
 
-
     def get_tracks_for_playlist(self, playlist_name: str) -> list:
-        """
-        Retrieves all track filepaths for a given playlist.
-
-        Args:
-            playlist_name (str): The name of the playlist.
-
-        Returns:
-            list: A list of file paths, or an empty list if not found.
-        """
+        """Retrieves all track filepaths for a given playlist."""
         return self.playlists.get(playlist_name, [])
 
     def on_playlists_changed(self, *args):
         """Default handler for the on_playlists_changed event."""
         log.debug("PlaylistManager: on_playlists_changed event fired.")
         pass
-

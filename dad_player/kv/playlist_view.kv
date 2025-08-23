@@ -4,31 +4,28 @@
 #:import get_color_from_hex kivy.utils.get_color_from_hex
 #:import SongRowItem dad_player.ui.widgets.song_list_item.SongRowItem
 
-<PlaylistListItem@OneLineIconListItem>
-    # Custom widget for the list of playlists
-    text: ""
-    IconLeftWidget:
-        icon: "queue-music"
-
 <PlaylistView>
     MDBoxLayout:
-        # Main container for desktop layout
         MDNavigationRail:
             id: nav_rail
-            visible: not root.is_mobile
             md_bg_color: get_color_from_hex("#202020")
             selected_color_background: root.theme_cls.primary_color
             ripple_color_item: root.theme_cls.primary_light
+            
             MDNavigationRailItem:
                 text: "Queue"
-                icon: "queue-music"
-                on_active: root.select_playlist("Queue")
+                icon: "playlist-play"
+                on_active: if self.active: root.select_playlist("Queue")
+            MDNavigationRailItem:
+                text: "Recents"
+                icon: "history"
+                on_active: if self.active: root.select_playlist("Recents")
+
 
         MDBoxLayout:
             orientation: 'vertical'
             padding: "16dp"
 
-            # Header section
             MDBoxLayout:
                 adaptive_height: True
                 spacing: "12dp"
@@ -42,11 +39,9 @@
                 MDIconButton:
                     icon: "dots-vertical"
                     on_release: root.open_playlist_menu(self)
-                    # Only show menu for user-created playlists
-                    opacity: 1 if root.active_playlist_name != "Queue" else 0
-                    disabled: root.active_playlist_name == "Queue"
+                    opacity: 1 if root.active_playlist_name not in ["Queue", "Recents"] else 0
+                    disabled: root.active_playlist_name in ["Queue", "Recents"]
 
-            # Song list
             RecycleView:
                 id: playlist_rv
                 viewclass: 'SongRowItem'
@@ -61,7 +56,6 @@
                     height: self.minimum_height
                     spacing: dp(2)
 
-    # "Create Playlist" button
     MDFloatingActionButton:
         icon: "plus"
         pos_hint: {"right": 1, "bottom": 1}
@@ -69,4 +63,3 @@
         on_release: root.show_create_playlist_dialog()
         elevation: 8
         pos: self.width + dp(20), self.height + dp(20)
-

@@ -33,17 +33,34 @@ class PlaylistView(MDBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._placeholder_art = get_placeholder_album_art_path()
-        self.bind(width=self._on_width_change)
-        Clock.schedule_once(lambda dt: self._on_width_change(self, self.width))
 
     def on_kv_post(self, base_widget):
         if self.playlist_manager:
+            self.reorder_static_items()
+            self.bind_static_items()
             self.refresh_playlist_names()
             self.select_playlist("Queue")
 
-    def _on_width_change(self, instance, width):
-        self.is_mobile = width < dp(700)
-        self.refresh_current_view()
+    def reorder_static_items(self):
+        rail = self.ids.nav_rail
+        static = []
+        for item in list(rail.children):
+            if isinstance(item, MDNavigationRailItem) and item.text in ["Queue", "Recents"]:
+                rail.remove_widget(item)
+                static.append(item)
+        static.reverse()
+        for item in static:
+            rail.add_widget(item)
+
+    def bind_static_items(self):
+        rail = self.ids.nav_rail
+        for item in rail.children:
+            if isinstance(item, MDNavigationRailItem) and item.text in ["Queue", "Recents"]:
+                item.bind(on_active=self._on_rail_item_active)
+
+    def _on_rail_item_active(self, instance, value):
+        if value:
+            self.select_playlist(instance.text)
 
     def on_playlist_manager(self, instance, value):
         if value:
@@ -52,30 +69,51 @@ class PlaylistView(MDBoxLayout):
     def on_player_engine(self, instance, value):
         if value:
             value.bind(
-                on_playlist_changed=self._update_queue_view,
-                on_media_loaded=self._update_queue_view
+                on_playlist_changed=self._on_engine_playlist_changed,
+                on_media_loaded=self._on_engine_media_loaded
             )
+
+    def _on_engine_playlist_changed(self, *args):
+        """The player engine's playlist (the queue) has been modified."""
+        if self.active_playlist_name == "Queue":
+            self._update_queue_view()
+
+    def _on_engine_media_loaded(self, *args):
+        """A new song has started playing, which affects all views."""
+        # This needs to refresh the content of whichever view is active
+        # to update the 'is_playing' icon status.
+        self.refresh_active_view_content()
+
+    def refresh_active_view_content(self, *args):
+        """Refreshes the song data for the currently selected tab."""
+        name = self.active_playlist_name
+        if name == "Queue":
+            self._update_queue_view()
+        elif name == "Recents":
+            self._update_recents_view()
+        else:
+            self._update_user_playlist_view()
 
     def refresh_playlist_names(self, *args):
         if not self.playlist_manager: return
 
         rail = self.ids.nav_rail
+        static_items = ["Queue", "Recents"]
+        
         for item in list(rail.children):
-            if isinstance(item, MDNavigationRailItem) and item.text != "Queue":
+            if isinstance(item, MDNavigationRailItem) and item.text not in static_items:
+                item.unbind(on_active=self._on_rail_item_active)
                 rail.remove_widget(item)
 
         names = self.playlist_manager.playlist_names
         for name in names:
             item = MDNavigationRailItem(text=name, icon="playlist-music")
-            item.bind(on_active=lambda instance, x=name: self.select_playlist(x))
+            item.bind(on_active=self._on_rail_item_active)
             rail.add_widget(item)
 
     def select_playlist(self, name: str):
         self.active_playlist_name = name
-        if name == "Queue":
-            self._update_queue_view()
-        else:
-            self._update_user_playlist_view()
+        self.refresh_active_view_content()
 
         for item in self.ids.nav_rail.children:
             if isinstance(item, MDNavigationRailItem) and item.text == name:
@@ -83,15 +121,20 @@ class PlaylistView(MDBoxLayout):
                 break
 
     def _update_queue_view(self, *args):
-        if self.active_playlist_name != "Queue": return
         if not self.player_engine or not self.library_manager: return
-
         queue = self.player_engine.get_current_playlist_details()
         self._populate_song_list(queue)
 
+    def _update_recents_view(self):
+        if not self.playlist_manager or not self.library_manager: return
+        filepaths = self.playlist_manager.get_tracks_for_playlist("Recents")
+        tracks_details = [
+            self.library_manager.get_track_details_by_filepath(fp) for fp in filepaths
+        ]
+        self._populate_song_list(tracks_details)
+
     def _update_user_playlist_view(self):
         if not self.playlist_manager or not self.library_manager: return
-
         filepaths = self.playlist_manager.get_tracks_for_playlist(self.active_playlist_name)
         tracks_details = [
             self.library_manager.get_track_details_by_filepath(fp) for fp in filepaths
@@ -100,7 +143,6 @@ class PlaylistView(MDBoxLayout):
 
     def _populate_song_list(self, tracks_details: list):
         playing_path = self.player_engine.current_media_path if self.player_engine else None
-
         self.song_list_data = [
             {
                 'text': track.get('title', 'Unknown'),
@@ -128,8 +170,7 @@ class PlaylistView(MDBoxLayout):
             if filepath in active_list:
                 self.player_engine.play_from_playlist_by_index(active_list.index(filepath))
         else:
-            playlist_tracks = self.playlist_manager.get_tracks_for_playlist(self.active_playlist_name)
-            self.player_engine.load_playlist(playlist_tracks, play_index=playlist_tracks.index(filepath))
+            self.player_engine.load_playlist([filepath], play_index=0)
 
     def show_create_playlist_dialog(self):
         if not self._dialog:
@@ -155,8 +196,8 @@ class PlaylistView(MDBoxLayout):
             self.playlist_manager.create_playlist(playlist_name)
             self.select_playlist(playlist_name)
             self._dialog.dismiss()
-        except PlaylistExistsError:
-            self.show_error_dialog(f"A playlist named '{playlist_name}' already exists.")
+        except PlaylistExistsError as e:
+            self.show_error_dialog(str(e))
         except Exception as e:
             log.error(f"Failed to create playlist: {e}")
             self.show_error_dialog("An unexpected error occurred.")
@@ -170,7 +211,7 @@ class PlaylistView(MDBoxLayout):
 
     def show_delete_confirmation(self):
         self._playlist_menu.dismiss()
-        if self.active_playlist_name == "Queue": return
+        if self.active_playlist_name in ["Queue", "Recents"]: return
 
         confirm_dialog = MDDialog(
             title="Delete Playlist?",
@@ -186,7 +227,7 @@ class PlaylistView(MDBoxLayout):
         button.parent.parent.parent.dismiss()
         try:
             self.playlist_manager.delete_playlist(self.active_playlist_name)
-            self.select_playlist("Queue") # Go back to queue after deletion
+            self.select_playlist("Queue")
         except Exception as e:
             log.error(f"Failed to delete playlist: {e}")
             self.show_error_dialog("An error occurred while deleting the playlist.")

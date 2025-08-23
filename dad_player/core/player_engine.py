@@ -83,8 +83,6 @@ class PlayerEngine(EventDispatcher):
     def _on_vlc_end_reached(self, event):
         self._stop_position_updater()
         if self.current_media_path:
-            # A more robust implementation might check play duration against total duration
-            # before incrementing play count.
             pass
         self._schedule_dispatch("on_playback_state_change")
         Clock.schedule_once(lambda dt: self.play_next(from_song_end=True), 0.1)
@@ -117,6 +115,8 @@ class PlayerEngine(EventDispatcher):
         self.stop()
         self.current_media_path = file_path
         self.current_song = file_path
+        
+        self.playlist_manager.add_track_to_recents(file_path)
 
         media = self.vlc_instance.media_new_path(os.path.abspath(file_path))
         self.player.set_media(media)
@@ -155,7 +155,7 @@ class PlayerEngine(EventDispatcher):
     def load_playlist(self, filepaths: list, play_index: int = 0):
         self.clear_playlist(dispatch_event=False)
         self._playlist = [p for p in filepaths if os.path.exists(p)]
-        self.playlist_manager.save_queue(self._playlist) # FIX: Was update_queue
+        self.playlist_manager.save_queue(self._playlist)
 
         self._playlist_metadata = {
             fp: self.library_manager.get_track_details_by_filepath(fp) or {}
@@ -177,7 +177,7 @@ class PlayerEngine(EventDispatcher):
         self._playlist, self._shuffled_playlist, self._playlist_metadata = [], [], {}
         self.current_media_path, self.current_song = None, None
         self._current_playlist_index = -1
-        self.playlist_manager.save_queue([]) # FIX: Was update_queue
+        self.playlist_manager.save_queue([])
         if dispatch_event:
             self._schedule_dispatch("on_playlist_changed", [])
             self._schedule_dispatch("on_media_loaded", None, 0)
