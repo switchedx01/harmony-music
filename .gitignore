@@ -16,6 +16,7 @@ pip-selfcheck.json
 cache/
 
 #Packaging and distribution
+finished/
 *.egg
 *.egg-info/
 .Python
