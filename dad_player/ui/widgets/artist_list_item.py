@@ -4,7 +4,7 @@ from kivy.properties import StringProperty, ObjectProperty
 from kivymd.uix.list import OneLineListItem
 
 class ArtistListItem(OneLineListItem):
-    """
+
     artist_name = StringProperty("")
     on_press_callback = ObjectProperty(None)
 
@@ -14,4 +14,3 @@ class ArtistListItem(OneLineListItem):
     def on_release(self):
         if self.on_press_callback:
             self.on_press_callback()
-"""
