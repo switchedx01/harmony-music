@@ -5,7 +5,6 @@
 # =============================================================================
 import os
 import sys
-import argparse
 
 
 from logging_config import setup_logging
@@ -35,18 +34,7 @@ def run_gui_app():
 # Main Entry Point
 # =============================================================================
 def main():
-    parser = argparse.ArgumentParser(description="Harmony Music Player.")
-    parser.add_argument(
-        "--cli",
-        action="store_true",
-        help="Run the application in command-line interface mode.",
-    )
-    args = parser.parse_args()
-
-    if args.cli:
-        run_cli_app()
-    else:
-        run_gui_app()
+    run_gui_app()
 
 if __name__ == "__main__":
     main()
