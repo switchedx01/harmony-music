@@ -3,7 +3,8 @@ Harmony is a simple, beautiful, and straightforward music player for Windows. It
 
 Current Version: 1.0.0-Beta
 
-✨ Main Features
+# Main Features
+
 Simple & Clean Interface: No clutter, no distractions. Just you and your music.
 
 Dynamic UI: The player's background and elements change color to match the album art for a beautiful, cohesive look.
