@@ -55,7 +55,7 @@ class PlayerEngine(EventDispatcher):
         last_volume_fraction = self.settings_manager.get_last_volume()
 
         if last_volume_fraction == 0.0:
-            initial_volume_percent = 50
+            initial_volume_percent = 75
         else:
             initial_volume_percent = last_volume_fraction * 100
         

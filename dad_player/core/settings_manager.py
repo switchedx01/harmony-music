@@ -34,7 +34,7 @@ class SettingsManager(EventDispatcher):
             CONFIG_KEY_AUTOPLAY: True,
             CONFIG_KEY_SHUFFLE: False,
             CONFIG_KEY_REPEAT: REPEAT_NONE,
-            CONFIG_KEY_LAST_VOLUME: 0.5,
+            CONFIG_KEY_LAST_VOLUME: 0.75,
             CONFIG_KEY_REPLAYGAIN: False,
         }
         self._load_settings()
