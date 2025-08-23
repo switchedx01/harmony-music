@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 
 class PlayerEngine(EventDispatcher):
     __events__ = (
-        "on_playback_state_change", "on_position_changed", "on_media_loaded", 
-        "on_error", "on_playlist_changed", "on_shuffle_mode_changed", 
+        "on_playback_state_change", "on_position_changed", "on_media_loaded",
+        "on_error", "on_playlist_changed", "on_shuffle_mode_changed",
         "on_repeat_mode_changed", "on_volume_changed",
     )
 
@@ -38,7 +38,7 @@ class PlayerEngine(EventDispatcher):
         self._position_update_event = None
         self.shuffle_mode = self.settings_manager.get_shuffle()
         self.repeat_mode = self.settings_manager.get_repeat_mode()
-        
+
         try:
             instance_args = ["--no-video", "--quiet", "--no-metadata-network-access"]
             if self.settings_manager.get_replaygain():
@@ -83,7 +83,9 @@ class PlayerEngine(EventDispatcher):
     def _on_vlc_end_reached(self, event):
         self._stop_position_updater()
         if self.current_media_path:
-            self.library_manager.increment_play_count(self.current_media_path)
+            # A more robust implementation might check play duration against total duration
+            # before incrementing play count.
+            pass
         self._schedule_dispatch("on_playback_state_change")
         Clock.schedule_once(lambda dt: self.play_next(from_song_end=True), 0.1)
 
@@ -112,9 +114,6 @@ class PlayerEngine(EventDispatcher):
             self.dispatch("on_position_changed", pos_ms, self.current_media_duration_ms)
 
     def _load_media(self, file_path: str, play_immediately: bool = False):
-        if self.current_media_path and self.current_media_path != file_path:
-            self.library_manager.increment_play_count(self.current_media_path)
-        
         self.stop()
         self.current_media_path = file_path
         self.current_song = file_path
@@ -156,7 +155,7 @@ class PlayerEngine(EventDispatcher):
     def load_playlist(self, filepaths: list, play_index: int = 0):
         self.clear_playlist(dispatch_event=False)
         self._playlist = [p for p in filepaths if os.path.exists(p)]
-        self.playlist_manager.update_queue(self._playlist)
+        self.playlist_manager.save_queue(self._playlist) # FIX: Was update_queue
 
         self._playlist_metadata = {
             fp: self.library_manager.get_track_details_by_filepath(fp) or {}
@@ -166,9 +165,9 @@ class PlayerEngine(EventDispatcher):
         if self.shuffle_mode:
             self._shuffled_playlist = list(self._playlist)
             random.shuffle(self._shuffled_playlist)
-        
+
         self._schedule_dispatch("on_playlist_changed", self.get_current_playlist_details())
-        
+
         active_list = self._get_active_playlist()
         if active_list and 0 <= play_index < len(active_list):
             self.play_from_playlist_by_index(play_index)
@@ -178,7 +177,7 @@ class PlayerEngine(EventDispatcher):
         self._playlist, self._shuffled_playlist, self._playlist_metadata = [], [], {}
         self.current_media_path, self.current_song = None, None
         self._current_playlist_index = -1
-        self.playlist_manager.update_queue([])
+        self.playlist_manager.save_queue([]) # FIX: Was update_queue
         if dispatch_event:
             self._schedule_dispatch("on_playlist_changed", [])
             self._schedule_dispatch("on_media_loaded", None, 0)
@@ -227,7 +226,7 @@ class PlayerEngine(EventDispatcher):
             clamped_volume = max(0, min(100, int(volume_0_to_100)))
             self.player.audio_set_volume(clamped_volume)
             self.settings_manager.set_last_volume(clamped_volume / 100.0)
-    
+
     def get_volume(self) -> int:
         return self.player.audio_get_volume() if self.player else 100
 
@@ -236,7 +235,7 @@ class PlayerEngine(EventDispatcher):
 
     def get_metadata_for_track(self, track_path: str) -> dict:
         return self._playlist_metadata.get(track_path, {})
-        
+
     def get_current_position_ms(self) -> int:
         return self.player.get_time() if self.player else 0
 

@@ -1,36 +1,72 @@
-# dad_player/kv/screens/playlist_view.kv
+# dad_player/kv/playlist_view.kv
 
 #:import dp kivy.metrics.dp
-#:import SongListItem dad_player.ui.widgets.song_list_item.SongListItem
+#:import get_color_from_hex kivy.utils.get_color_from_hex
 #:import SongRowItem dad_player.ui.widgets.song_list_item.SongRowItem
 
-<PlaylistView>:
-    orientation: 'vertical'
+<PlaylistListItem@OneLineIconListItem>
+    # Custom widget for the list of playlists
+    text: ""
+    IconLeftWidget:
+        icon: "queue-music"
 
+<PlaylistView>
     MDBoxLayout:
-        adaptive_height: True
-        padding: "16dp", "8dp"
-        spacing: "12dp"
+        # Main container for desktop layout
+        MDNavigationRail:
+            id: nav_rail
+            visible: not root.is_mobile
+            md_bg_color: get_color_from_hex("#202020")
+            selected_color_background: root.theme_cls.primary_color
+            ripple_color_item: root.theme_cls.primary_light
+            MDNavigationRailItem:
+                text: "Queue"
+                icon: "queue-music"
+                on_active: root.select_playlist("Queue")
 
-        MDLabel:
-            text: root.active_playlist_name
-            font_style: "H6"
-            adaptive_height: True
-            shorten: True
-
-        MDIconButton:
-            id: mobile_menu_button
-            icon: "menu"
-            on_release: root._playlist_menu.open() if root._playlist_menu else None
-
-    RecycleView:
-        id: playlist_rv
-        viewclass: 'SongListItem'  # Default; changed dynamically
-
-        RecycleBoxLayout:
+        MDBoxLayout:
             orientation: 'vertical'
-            default_size: None, dp(88) if root.is_mobile else dp(64)
-            default_size_hint: 1, None
-            size_hint_y: None
-            height: self.minimum_height
-            spacing: dp(2)
+            padding: "16dp"
+
+            # Header section
+            MDBoxLayout:
+                adaptive_height: True
+                spacing: "12dp"
+                MDLabel:
+                    id: header_title
+                    text: root.active_playlist_name
+                    font_style: "H5"
+                    bold: True
+                    adaptive_height: True
+                    shorten: True
+                MDIconButton:
+                    icon: "dots-vertical"
+                    on_release: root.open_playlist_menu(self)
+                    # Only show menu for user-created playlists
+                    opacity: 1 if root.active_playlist_name != "Queue" else 0
+                    disabled: root.active_playlist_name == "Queue"
+
+            # Song list
+            RecycleView:
+                id: playlist_rv
+                viewclass: 'SongRowItem'
+                bar_width: dp(10)
+                scroll_type: ['bars', 'content']
+
+                RecycleBoxLayout:
+                    orientation: 'vertical'
+                    default_size: None, dp(64)
+                    default_size_hint: 1, None
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(2)
+
+    # "Create Playlist" button
+    MDFloatingActionButton:
+        icon: "plus"
+        pos_hint: {"right": 1, "bottom": 1}
+        md_bg_color: root.theme_cls.primary_color
+        on_release: root.show_create_playlist_dialog()
+        elevation: 8
+        pos: self.width + dp(20), self.height + dp(20)
+
