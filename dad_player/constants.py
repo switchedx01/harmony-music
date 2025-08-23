@@ -5,7 +5,7 @@
 # Application Metadata
 # =============================================================================
 APP_NAME = "Harmony Music Player"
-APP_VERSION = "0.0.4 Danish" 
+APP_VERSION = "1.0.0 Beta" 
 
 # =============================================================================
 # File and Directory Names
@@ -24,7 +24,7 @@ ALBUM_ART_NOW_PLAYING_SIZE = 400 # For the main now playing art
 # =============================================================================
 # Supported Formats
 # =============================================================================
-SUPPORTED_AUDIO_EXTENSIONS = (".mp3", ".wav", ".ogg", ".flac", ".m4a", "aac", ".opus")
+SUPPORTED_AUDIO_EXTENSIONS = (".mp3", ".wav", ".ogg", ".flac", ".m4a", "aac")
 
 # =============================================================================
 # Settings Keys

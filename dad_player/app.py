@@ -1,13 +1,11 @@
-# dad_player/app.py
-
 import logging
 import os
+import sys
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.uix.label import Label
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
-
 from dad_player.constants import APP_NAME, APP_VERSION
 from dad_player.core.exceptions import VlcInitializationError
 from dad_player.core.library_manager import LibraryManager
@@ -19,6 +17,13 @@ from dad_player.utils.color_utils import get_theme_colors_from_art, apply_theme_
 from dad_player.core.playlist_manager import PlaylistManager
 
 log = logging.getLogger(__name__)
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 class DadPlayerApp(MDApp):
     def __init__(self, **kwargs):
@@ -32,7 +37,8 @@ class DadPlayerApp(MDApp):
         self.default_accent_palette = "Blue"
 
     def build(self):
-        # Explicit import to ensure KivyMD's filemanager KV (including MDFileManagerItem) is loaded early
+        self.icon = resource_path('assets/icons/harmony_player_icon.ico')
+        
         from kivymd.uix.filemanager import MDFileManager
 
         Window.size = (480, 800)
@@ -83,7 +89,7 @@ class DadPlayerApp(MDApp):
         return self.screen_manager
     
     def _load_kv_files(self):
-        kv_path = os.path.join(os.path.dirname(__file__), "kv")
+        kv_path = resource_path(os.path.join("dad_player", "kv"))
         for root, _, files in os.walk(kv_path):
             for kv_file in files:
                 if kv_file.endswith(".kv"):
