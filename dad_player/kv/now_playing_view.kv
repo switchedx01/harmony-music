@@ -1,9 +1,10 @@
 # dad_player/kv/screens/now_playing_view.kv
+#:import AspectRatioLayout dad_player.utils.layouts.AspectRatioLayout
 
 <NowPlayingView>:
     orientation: 'vertical'
-    padding: "16dp"
-    spacing: "8dp"
+    padding: "24dp"
+    spacing: "16dp"
 
     canvas.before:
         Color:
@@ -12,47 +13,70 @@
             size: self.size
             pos: self.pos
         Color:
-            rgba: 1, 1, 1, 0.5
+            rgba: 1, 1, 1, 0.3
         Rectangle:
             texture: root.blurred_bg_texture
             size: self.size
             pos: self.pos
 
-    MDCard:
-        id: album_art_card
-        radius: [16]
-        elevation: 8
-        size_hint_y: 1
-        md_bg_color: 0, 0, 0, 0
+    # --- Album Art Section ---
+    AspectRatioLayout:
+        ratio: 1.0
+        size_hint: 1, 1
 
-        MDRelativeLayout:
+        MDCard:
+            radius: [24] # Changeable: Corner roundness of the art container
+            elevation: 12 # Changeable: Shadow depth of the art container
+            md_bg_color: 0, 0, 0, 0.2
+            padding: "12dp"
+
             Image:
                 id: album_art_np
-                texture: root.album_art_texture
+                color: 0, 0, 0, 0
                 fit_mode: "contain"
+                canvas.before:
+                    Color:
+                        rgba: 1, 1, 1, 1
+                    RoundedRectangle:
+                        texture: root.album_art_texture
+                        size: self.norm_image_size
+                        pos: self.center_x - self.norm_image_size[0] / 2., self.center_y - self.norm_image_size[1] / 2.
+                        radius: [18] # Changeable: Corner roundness of the album art itself
 
-            MDBoxLayout:
-                orientation: 'vertical'
-                adaptive_height: True
-                pos_hint: {'center_x': 0.5, 'bottom': 1}
-                padding: "8dp"
-                md_bg_color: 0, 0, 0, 0.5
-                opacity: root.artist_overlay_opacity
 
-                MDLabel:
-                    text: root.artist_name_text
-                    font_style: "H6"
-                    halign: 'center'
-                    bold: True
-                    adaptive_height: True
-                    shorten: True
-                    shorten_from: 'right'
-
+    # --- Song Info Section ---
     MDBoxLayout:
         orientation: 'vertical'
         adaptive_height: True
-        spacing: "0dp"
+        spacing: "4dp"
+        padding: ["16dp", 0]
 
+        MDLabel:
+            text: root.song_title_text
+            font_style: "H5"
+            bold: True
+            halign: 'center'
+            adaptive_height: True
+            shorten: True
+            shorten_from: 'right'
+            theme_text_color: "Primary"
+
+        MDLabel:
+            text: root.artist_name_text
+            font_style: "Subtitle1"
+            halign: 'center'
+            adaptive_height: True
+            shorten: True
+            shorten_from: 'right'
+            theme_text_color: "Secondary"
+
+    # --- Controls Section ---
+    MDBoxLayout:
+        orientation: 'vertical'
+        adaptive_height: True
+        spacing: "8dp"
+
+        # --- Progress Slider ---
         MDRelativeLayout:
             size_hint_y: None
             height: "48dp"
@@ -61,8 +85,7 @@
                 orientation: 'horizontal'
                 size_hint_y: None
                 height: "48dp"
-                spacing: "8dp"
-                padding: [0, "8dp"]
+                spacing: "12dp"
                 pos_hint: {'center_y': 0.5}
 
                 MDLabel:
@@ -70,15 +93,13 @@
                     font_style: "Caption"
                     theme_text_color: "Secondary"
                     size_hint_x: None
-                    width: "40dp"
-                    pos_hint: {'center_y': 0.5}
+                    width: dp(40)
+                    halign: 'left'
 
                 MDSlider:
                     id: progress_slider
                     max: root.progress_slider_max
                     value: root.progress_slider_value
-                    thumb_size_up: '24sp'
-                    thumb_size_down: '36sp'
                     pos_hint: {'center_y': 0.5}
                     hint: False
                     on_touch_down: root.start_seek(self, args[1])
@@ -91,75 +112,76 @@
                     font_style: "Caption"
                     theme_text_color: "Secondary"
                     size_hint_x: None
-                    width: "40dp"
+                    width: dp(40)
                     halign: 'right'
-                    pos_hint: {'center_y': 0.5}
             
             MDLabel:
                 id: seeker_hint_label
-                font_style: "Caption"
-                theme_text_color: "Primary"
+                font_style: "Body2"
+                theme_text_color: "Custom"
+                text_color: root.theme_cls.primary_dark
                 halign: 'center'
                 size_hint: None, None
                 size: self.texture_size
                 pos_hint: {'center_x': progress_slider.value_pos[0] if progress_slider.max > 0 else 0.5}
-                y: progress_slider.top + dp(4)
+                y: progress_slider.top + dp(8)
                 opacity: 0
                 canvas.before:
                     Color:
                         rgba: root.theme_cls.primary_light
                     RoundedRectangle:
-                        size: self.size[0] + dp(12), self.size[1] + dp(4)
-                        pos: self.x - dp(6), self.y - dp(2)
-                        radius: [dp(4)]
+                        size: self.size[0] + dp(16), self.size[1] + dp(8)
+                        pos: self.x - dp(8), self.y - dp(4)
+                        radius: [dp(8)]
 
+        # --- Playback Buttons ---
         MDBoxLayout:
             adaptive_height: True
             size_hint_x: None
             width: self.minimum_width
             pos_hint: {'center_x': 0.5}
-            spacing: "8dp"
-            padding: [0, "4dp"]
+            spacing: "16dp"
 
             MDIconButton:
                 icon: "shuffle-variant"
                 on_release: root.on_shuffle_button_press()
                 theme_text_color: "Primary" if root.shuffle_enabled else "Secondary"
-                icon_size: "24sp"
+                icon_size: "28sp"
 
             MDIconButton:
                 icon: "skip-previous"
                 on_release: root.on_previous_button_press()
-                icon_size: "36sp"
+                icon_size: "40sp"
 
             MDIconButton:
                 icon: root.play_pause_icon_text
                 on_release: root.on_play_pause_button_press()
-                icon_size: "56sp"
+                icon_size: "64sp"
                 pos_hint: {'center_y': 0.5}
                 theme_text_color: "Primary"
 
             MDIconButton:
                 icon: "skip-next"
                 on_release: root.on_next_button_press()
-                icon_size: "36sp"
+                icon_size: "40sp"
 
             MDIconButton:
                 icon: root.repeat_mode_icon
                 on_release: root.on_repeat_button_press()
                 theme_text_color: "Primary" if root.repeat_mode_icon != 'repeat-off' else "Secondary"
-                icon_size: "24sp"
+                icon_size: "28sp"
 
+        # --- Volume Slider ---
         MDBoxLayout:
             size_hint_y: None
             height: "48dp"
-            spacing: "10dp"
-            pos_hint: {'center_x': 0.5}
+            spacing: "12dp"
+            padding: ["8dp", 0]
 
             MDIconButton:
                 icon: "volume-medium"
                 theme_text_color: "Secondary"
-                icon_size: "22sp"
+                icon_size: "24sp"
                 pos_hint: {'center_y': 0.5}
 
             MDSlider:
@@ -167,14 +189,6 @@
                 min: 0
                 max: 100
                 value: root.volume_slider_value
-                thumb_size_up: '20sp'
-                thumb_size_down: '28sp'
                 on_value: root.handle_volume_change(self)
                 color: root.theme_cls.primary_color
-                pos_hint: {'center_y': 0.5}
-
-            MDIconButton:
-                icon: "volume-high"
-                theme_text_color: "Secondary"
-                icon_size: "22sp"
                 pos_hint: {'center_y': 0.5}

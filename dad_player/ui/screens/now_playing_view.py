@@ -8,10 +8,11 @@ from kivy.properties import (
     NumericProperty, ObjectProperty, StringProperty, BooleanProperty
 )
 from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.clock import Clock
 
 from dad_player.utils.formatting import format_duration
 from dad_player.utils.image_utils import (
-    blur_image_data, resize_image_data, get_placeholder_album_art_path
+    process_and_cache_album_art, get_placeholder_album_art_path
 )
 from dad_player.constants import ALBUM_ART_NOW_PLAYING_SIZE
 
@@ -22,25 +23,30 @@ class NowPlayingView(MDBoxLayout):
     library_manager = ObjectProperty(None)
     settings_manager = ObjectProperty(None)
 
+    song_title_text = StringProperty("No Song Playing")
+    artist_name_text = StringProperty("...")
     current_time_text = StringProperty("0:00")
     total_time_text = StringProperty("0:00")
-    artist_name_text = StringProperty("Unknown Artist")
     progress_slider_value = NumericProperty(0)
     progress_slider_max = NumericProperty(1000)
     volume_slider_value = NumericProperty(100)
-    play_pause_icon_text = StringProperty("play")
+    play_pause_icon_text = StringProperty("play-circle")
     album_art_texture = ObjectProperty(None, allownone=True)
     blurred_bg_texture = ObjectProperty(None, allownone=True)
     shuffle_enabled = BooleanProperty(False)
     repeat_mode_icon = StringProperty("repeat-off")
-    artist_overlay_opacity = NumericProperty(0)
 
     _is_seeking = False
     _default_placeholder_texture = None
     _default_blurred_placeholder_texture = None
+    _current_track_path = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        Clock.schedule_once(self._post_init)
+
+    def _post_init(self, dt):
+        """Perform initialization after the widget is created."""
         self._load_placeholder_textures()
         if self.player_engine:
             self._bind_player_events()
@@ -49,24 +55,17 @@ class NowPlayingView(MDBoxLayout):
             log.warning("NowPlayingView initialized without a PlayerEngine.")
             self._apply_placeholder_art()
 
-    def on_kv_post(self, base_widget):
-        log.debug(f"Available IDs in NowPlayingView: {list(self.ids.keys())}")
-        super().on_kv_post(base_widget)
-
     def start_seek(self, slider, touch):
-        """Called only on on_touch_down of the progress slider."""
         if slider.collide_point(*touch.pos):
             self._is_seeking = True
             self.ids.seeker_hint_label.opacity = 1
 
     def update_seek_label(self, slider, touch):
-        """Called only on on_touch_move of the progress slider."""
         if self._is_seeking:
             formatted_time = format_duration(slider.value / 1000)
             self.ids.seeker_hint_label.text = formatted_time
 
     def end_seek(self, slider, touch):
-        """Called only on on_touch_up of the progress slider."""
         if self._is_seeking:
             self._is_seeking = False
             self.ids.seeker_hint_label.opacity = 0
@@ -75,15 +74,18 @@ class NowPlayingView(MDBoxLayout):
                 self.player_engine.seek(slider.value)
 
     def _load_placeholder_textures(self):
+        """Loads default art and its blurred version ONCE."""
         try:
             placeholder_path = get_placeholder_album_art_path()
             if placeholder_path and os.path.exists(placeholder_path):
-                self._default_placeholder_texture = CoreImage(placeholder_path).texture
                 with open(placeholder_path, 'rb') as f:
                     raw_data = f.read()
-                blurred_stream = blur_image_data(raw_data, radius=25)
-                if blurred_stream:
-                    self._default_blurred_placeholder_texture = CoreImage(blurred_stream, ext='png').texture
+                
+                self._default_placeholder_texture = CoreImage(placeholder_path).texture
+                
+                blurred_path, _ = process_and_cache_album_art(raw_data, "placeholder_blurred", blur_radius=25)
+                if blurred_path:
+                    self._default_blurred_placeholder_texture = CoreImage(blurred_path).texture
         except Exception as e:
             log.error(f"Failed to load placeholder textures: {e}")
 
@@ -98,14 +100,21 @@ class NowPlayingView(MDBoxLayout):
 
     def update_ui_from_player_state(self, *args):
         if not self.player_engine: return
+        
         current_path = self.player_engine.current_media_path
         if current_path:
             track_meta = self.player_engine.get_metadata_for_track(current_path)
+            self.song_title_text = track_meta.get('title', "Unknown Title")
             self.artist_name_text = track_meta.get('artist', "Unknown Artist")
-            self.load_album_art(current_path)
+            if self._current_track_path != current_path:
+                self._current_track_path = current_path
+                self.load_album_art(current_path)
         else:
-            self.artist_name_text = ""
+            self.song_title_text = "No Song Playing"
+            self.artist_name_text = "..."
             self._apply_placeholder_art()
+            self._current_track_path = None
+
         if hasattr(self.player_engine, 'get_volume'):
             self.volume_slider_value = self.player_engine.get_volume()
         self._on_playback_state_change()
@@ -113,21 +122,28 @@ class NowPlayingView(MDBoxLayout):
         self._on_repeat_mode_changed(None, self.player_engine.repeat_mode)
 
     def load_album_art(self, track_path):
-        art_path = self.library_manager.get_album_art_path_for_file(track_path)
-        if art_path and os.path.exists(art_path):
+        """Loads album art using the new caching utility."""
+        raw_art_data = self.library_manager.get_raw_album_art_for_file(track_path)
+        
+        if raw_art_data:
             try:
-                with open(art_path, 'rb') as f:
-                    raw_art_data = f.read()
-                resized_stream = resize_image_data(raw_art_data, target_max_dim=ALBUM_ART_NOW_PLAYING_SIZE)
-                blurred_stream = blur_image_data(raw_art_data, radius=25)
-                if resized_stream:
-                    self.album_art_texture = CoreImage(resized_stream, ext='png').texture
-                if blurred_stream:
-                    self.blurred_bg_texture = CoreImage(blurred_stream, ext='png').texture
+                cached_art_path, cached_blurred_path = process_and_cache_album_art(
+                    raw_art_data,
+                    track_path,
+                    size=(ALBUM_ART_NOW_PLAYING_SIZE, ALBUM_ART_NOW_PLAYING_SIZE),
+                    blur_radius=25
+                )
+                
+                if cached_art_path:
+                    self.album_art_texture = CoreImage(cached_art_path).texture
+                if cached_blurred_path:
+                    self.blurred_bg_texture = CoreImage(cached_blurred_path).texture
+                
                 self._animate_album_art()
                 return
             except Exception as e:
-                log.error(f"Error processing album art from {art_path}: {e}")
+                log.error(f"Error processing album art for {track_path}: {e}")
+        
         self._apply_placeholder_art()
 
     def _apply_placeholder_art(self):
@@ -139,10 +155,6 @@ class NowPlayingView(MDBoxLayout):
         if album_art_image:
             anim = Animation(opacity=0, duration=0.2) + Animation(opacity=1, duration=0.3)
             anim.start(album_art_image)
-
-    def toggle_artist_overlay(self):
-        new_opacity = 1 if self.artist_overlay_opacity == 0 else 0
-        Animation(artist_overlay_opacity=new_opacity, duration=0.3).start(self)
 
     def on_play_pause_button_press(self):
         if self.player_engine: self.player_engine.play_pause_toggle()
