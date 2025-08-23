@@ -13,6 +13,7 @@ ENV/
 .env/
 pyvenv.cfg
 pip-selfcheck.json
+cache/
 
 #Packaging and distribution
 *.egg
