@@ -27,6 +27,7 @@ from dad_player.utils.file_utils import (
 
 log = logging.getLogger(__name__)
 
+# This is a helper function, it can remain as is.
 def _get_tag_values(meta, key_list):
     if not meta:
         return []
@@ -63,6 +64,8 @@ class LibraryManager(EventDispatcher):
         self._scan_thread = None
         log.info(f"LibraryManager initialized. Database at: {self.db_path}")
 
+    # --- All existing methods up to get_album_art_path_for_file remain the same ---
+    # (e.g., _get_db_connection, _initialize_db, start_scan_music_library, etc.)
     def _get_db_connection(self):
         try:
             conn = sqlite3.connect(self.db_path, timeout=10)
@@ -459,6 +462,37 @@ class LibraryManager(EventDispatcher):
             if row and row['art_filename']:
                 art_path = self.art_cache_dir / row['art_filename']
                 return str(art_path) if art_path.exists() else None
+        return None
+
+    # --- ADDED METHOD ---
+    def get_raw_album_art_for_file(self, filepath: str) -> bytes | None:
+        """
+        Retrieves the raw, unprocessed album art data for a given track.
+        """
+        if not filepath or not os.path.exists(filepath):
+            return None
+        try:
+            meta = mutagen.File(filepath, easy=False)
+            if meta is None:
+                return None
+            
+            # Look for album art in various common tags
+            pictures = []
+            if hasattr(meta, 'pictures'):
+                pictures = meta.pictures
+            elif 'APIC:' in meta:
+                pictures = [meta['APIC:']]
+            elif meta.tags and any(key.startswith('covr') for key in meta.tags):
+                pictures = [meta.tags.get('covr')[0]]
+
+            if pictures:
+                # Return the raw data of the first found picture
+                pic = pictures[0]
+                return pic.data if hasattr(pic, 'data') else bytes(pic)
+                
+        except Exception as e:
+            log.error(f"Failed to extract raw album art from {filepath}: {e}")
+        
         return None
 
     def close(self):
