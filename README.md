@@ -5,17 +5,17 @@ Current Version: 1.0.0-Beta
 
 # Main Features
 
-Simple & Clean Interface: No clutter, no distractions. Just you and your music.
-Dynamic UI: The player's background and elements change color to match the album art for a beautiful, cohesive look.
-Standard Music Controls: All the essential features you need: play, pause, skip, shuffle, and repeat.
-Library Management: Powered by a local SQL database to easily organize and access your music library.
+- Simple & Clean Interface: No clutter, no distractions. Just you and your music.
+- Dynamic UI: The player's background and elements change color to match the album art for a beautiful, cohesive look.
+- Standard Music Controls: All the essential features you need: play, pause, skip, shuffle, and repeat.
+- Library Management: Powered by a local SQL database to easily organize and access your music library.
 
 # Technologies Used
 
-Python: The core programming language.
-Kivy: Used for building the cross-platform graphical user interface.
-VLC: The powerful media framework used for audio playback.
-SQL: For robust and local data storage of your music library.
+- Python: The core programming language.
+- Kivy: Used for building the cross-platform graphical user interface.
+- VLC: The powerful media framework used for audio playback.
+- SQL: For robust and local data storage of your music library.
 
 # Installation
 
@@ -34,6 +34,7 @@ Getting Harmony Music Player set up is easy. Just follow these steps:
 Simply open the application after installation. The first time you run it, you may be prompted to add your music library. Point the application to the folder where your music is stored, and Harmony will handle the rest.
 
 # Contributing
+
 Contributions are welcome! Whether you want to report a bug, suggest a feature, or write code, your help is appreciated.
 Report Bugs or Suggest Features: Please use the Issues tab on GitHub to let me know about any problems or ideas you have.
 Submit Code: If you'd like to contribute code, please follow these steps:
