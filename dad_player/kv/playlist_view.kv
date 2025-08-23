@@ -1,32 +1,36 @@
 # dad_player/kv/screens/playlist_view.kv
 
+#:import dp kivy.metrics.dp
 #:import SongListItem dad_player.ui.widgets.song_list_item.SongListItem
+#:import SongRowItem dad_player.ui.widgets.song_list_item.SongRowItem
 
 <PlaylistView>:
     orientation: 'vertical'
-    padding: "8dp"
-    spacing: "8dp"
 
     MDBoxLayout:
         adaptive_height: True
-        spacing: "10dp"
-        
+        padding: "16dp", "8dp"
+        spacing: "12dp"
+
         MDLabel:
-            text: "Current Playlist"
+            text: root.active_playlist_name
             font_style: "H6"
             adaptive_height: True
+            shorten: True
 
-        MDRaisedButton:
-            text: "Clear"
-            on_release: root.on_clear_playlist_button_press()
+        MDIconButton:
+            id: mobile_menu_button
+            icon: "menu"
+            on_release: root._playlist_menu.open() if root._playlist_menu else None
 
     RecycleView:
         id: playlist_rv
-        viewclass: 'SongListItem'
-        
+        viewclass: 'SongListItem'  # Default; changed dynamically
+
         RecycleBoxLayout:
-            default_size: None, dp(64)
+            orientation: 'vertical'
+            default_size: None, dp(88) if root.is_mobile else dp(64)
             default_size_hint: 1, None
             size_hint_y: None
             height: self.minimum_height
-            orientation: 'vertical'
+            spacing: dp(2)

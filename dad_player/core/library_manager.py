@@ -27,7 +27,6 @@ from dad_player.utils.file_utils import (
 
 log = logging.getLogger(__name__)
 
-# This is a helper function, it can remain as is.
 def _get_tag_values(meta, key_list):
     if not meta:
         return []
@@ -64,8 +63,6 @@ class LibraryManager(EventDispatcher):
         self._scan_thread = None
         log.info(f"LibraryManager initialized. Database at: {self.db_path}")
 
-    # --- All existing methods up to get_album_art_path_for_file remain the same ---
-    # (e.g., _get_db_connection, _initialize_db, start_scan_music_library, etc.)
     def _get_db_connection(self):
         try:
             conn = sqlite3.connect(self.db_path, timeout=10)

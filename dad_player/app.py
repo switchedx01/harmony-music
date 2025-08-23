@@ -16,16 +16,16 @@ from dad_player.core.settings_manager import SettingsManager
 from dad_player.ui.screens.main_screen import MainScreen
 from dad_player.ui.screens.settings_screen import SettingsScreen
 from dad_player.utils.color_utils import get_theme_colors_from_art, apply_theme_colors
+from dad_player.core.playlist_manager import PlaylistManager
 
 log = logging.getLogger(__name__)
 
 class DadPlayerApp(MDApp):
-    """The main application class and orchestrator for core components."""
-    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.settings_manager = None
         self.library_manager = None
+        self.playlist_manager = None
         self.player_engine = None
         self.screen_manager = None
         self.default_primary_palette = "BlueGray"
@@ -40,10 +40,12 @@ class DadPlayerApp(MDApp):
 
         try:
             self.settings_manager = SettingsManager()
+            self.playlist_manager = PlaylistManager()
             self.library_manager = LibraryManager(settings_manager=self.settings_manager)
             self.player_engine = PlayerEngine(
                 settings_manager=self.settings_manager,
                 library_manager=self.library_manager,
+                playlist_manager=self.playlist_manager
             )
         except VlcInitializationError as e:
             log.critical(f"App failed to start: {e}")
@@ -62,6 +64,7 @@ class DadPlayerApp(MDApp):
             player_engine=self.player_engine,
             library_manager=self.library_manager,
             settings_manager=self.settings_manager,
+            playlist_manager=self.playlist_manager,
         )
         settings_screen = SettingsScreen(
             name="settings_screen",
@@ -98,7 +101,6 @@ class DadPlayerApp(MDApp):
             self.library_manager.close()
 
     def _on_media_loaded(self, instance, media_path, duration_ms):
-        """Event handler for player media changes; triggers dynamic theme update."""
         if not media_path:
             apply_theme_colors(self, self.default_primary_palette, self.default_accent_palette)
             return

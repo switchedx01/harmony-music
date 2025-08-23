@@ -14,6 +14,7 @@ class MainScreen(MDScreen):
     player_engine = ObjectProperty(None)
     library_manager = ObjectProperty(None)
     settings_manager = ObjectProperty(None)
+    playlist_manager = ObjectProperty(None) # Add this line
     top_bar_title = StringProperty("DaD Player")
 
     def __init__(self, **kwargs):
@@ -72,13 +73,19 @@ class MainScreen(MDScreen):
 
         self._views = {
             "now_playing_screen": NowPlayingView(
-                player_engine=self.player_engine, library_manager=self.library_manager, settings_manager=self.settings_manager
+                player_engine=self.player_engine, 
+                library_manager=self.library_manager, 
+                settings_manager=self.settings_manager
             ),
             "library_screen": LibraryView(
-                player_engine=self.player_engine, library_manager=self.library_manager, settings_manager=self.settings_manager
+                player_engine=self.player_engine, 
+                library_manager=self.library_manager, 
+                settings_manager=self.settings_manager
             ),
             "playlist_screen": PlaylistView(
-                player_engine=self.player_engine, library_manager=self.library_manager
+                player_engine=self.player_engine, 
+                library_manager=self.library_manager,
+                playlist_manager=self.playlist_manager # Add this line
             ),
         }
         log.info("Main views have been instantiated.")
@@ -132,10 +139,10 @@ class MainScreen(MDScreen):
         if self._current_layout == 'desktop':
             if self.ids.desktop_screen_manager.has_screen(screen_name):
                 self.ids.desktop_screen_manager.current = screen_name
-                if 'desktop_nav_rail' in self.ids:
-                    nav_rail = self.ids.desktop_nav_rail
-                    for item in nav_rail.get_items():
-                        if item.name == screen_name:
+                if 'nav_rail' in self.ids:
+                    nav_rail = self.ids.nav_rail
+                    for item in nav_rail.children:
+                        if hasattr(item, 'name') and item.name == screen_name:
                             nav_rail.set_active_item(item)
                             break
                 if screen_name == "library_screen":
