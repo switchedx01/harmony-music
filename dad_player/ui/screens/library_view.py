@@ -4,7 +4,7 @@ import logging
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.properties import (
-    BooleanProperty, ListProperty, NumericProperty, ObjectProperty, StringProperty, DictProperty
+    BooleanProperty, DictProperty, NumericProperty, ObjectProperty, StringProperty
 )
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp
@@ -29,7 +29,9 @@ class LibraryView(MDBoxLayout):
     current_view_mode = StringProperty("all_albums")
     current_args = DictProperty({})
     display_path_text = StringProperty("All Albums")
-    
+    cycle_view_text = StringProperty("Artists")
+    can_go_back = BooleanProperty(False)
+
     is_scanning = BooleanProperty(False)
     scan_progress_message = StringProperty("")
     progress_value = NumericProperty(0.0)
@@ -43,6 +45,7 @@ class LibraryView(MDBoxLayout):
         self._placeholder_art = get_placeholder_album_art_path()
         self._navigation_stack = []
         self._last_search_results = []
+        self.bind(current_view_mode=self.on_view_mode_change)
         Clock.schedule_once(self._post_init)
 
     def _post_init(self, dt):
@@ -53,6 +56,14 @@ class LibraryView(MDBoxLayout):
         Window.bind(on_resize=self._on_window_resize)
         self._update_layout_mode()
         self.navigate_to_all_albums()
+
+    def on_view_mode_change(self, *args):
+        if self.current_view_mode == "all_albums":
+            self.cycle_view_text = "Artists"
+        elif self.current_view_mode == "artists":
+            self.cycle_view_text = "Songs"
+        elif self.current_view_mode == "all_songs":
+            self.cycle_view_text = "Albums"
 
     def _on_window_resize(self, window, width, height):
         self._update_layout_mode()
@@ -79,6 +90,7 @@ class LibraryView(MDBoxLayout):
         no_results_label = self.ids.no_results_label
         no_results_label.height = 0
         no_results_label.opacity = 0
+        self.can_go_back = bool(self._navigation_stack)
 
         if self.current_view_mode == "all_albums":
             self.display_path_text = "All Albums"
@@ -102,6 +114,22 @@ class LibraryView(MDBoxLayout):
                 'on_press_callback': lambda a=a: self.navigate_to_albums_for_artist(a['id'], a['name'])
             } for a in artists]
             self._update_rv('artists', data)
+
+        elif self.current_view_mode == "all_songs":
+            self.display_path_text = "All Songs"
+            self.album_art_path = ""
+            self.album_artist = ""
+            all_songs = self.library_manager.search_tracks('')
+            self._last_search_results = all_songs
+            data = [{
+                'text': t.get('title', 'Unknown Title'),
+                'secondary_text': f"{t.get('artist_name', 'Unknown Artist')} - {t.get('album_name', 'Unknown Album')}",
+                'tertiary_text': format_duration(t.get('duration', 0)),
+                'art_path': self.library_manager.get_album_art_path_for_file(t['filepath']) or self._placeholder_art,
+                'filepath': t['filepath'],
+                'on_press_callback': lambda t=t: self.on_song_selected(t['id'], t['filepath'])
+            } for t in all_songs]
+            self._update_rv('all_songs', data)
 
         elif self.current_view_mode == "albums_for_artist":
             artist_id = self.current_args['artist_id']
@@ -170,25 +198,21 @@ class LibraryView(MDBoxLayout):
         rv = self.ids.library_rv
         layout = self.ids.rv_layout
 
-        if mode in ('all_albums', 'albums_for_artist', 'search_results_albums'):
+        if mode in ('all_albums', 'albums_for_artist'):
             rv.viewclass = 'AlbumGridItem'
-            
-            target_item_width = dp(180) 
-            
+            target_item_width = dp(180)
             if rv.width > 0:
                 cols = max(2, int(rv.width / target_item_width))
                 layout.cols = min(cols, 8)
             else:
                 layout.cols = 2
-
             spacing = dp(16)
             if rv.width > 0 and layout.cols > 0:
                 item_width = (rv.width - (layout.cols + 1) * spacing) / layout.cols
                 layout.default_size = (None, item_width)
             else:
                 layout.default_size = (None, dp(240))
-
-        else: 
+        else:
             if mode == 'artists':
                 rv.viewclass = 'ArtistListItem'
                 layout.default_size = (None, dp(88))
@@ -202,14 +226,21 @@ class LibraryView(MDBoxLayout):
         rv.refresh_from_data()
         rv.scroll_y = 1
 
+    def cycle_view(self):
+        if self.current_view_mode in ["all_albums", "songs_for_album"]:
+            self.navigate_to_artists()
+        elif self.current_view_mode in ["artists", "albums_for_artist"]:
+            self.navigate_to_all_songs()
+        elif self.current_view_mode == "all_songs":
+            self.navigate_to_all_albums()
+        else:
+            self.navigate_to_all_albums()
+
     def navigate_to_all_albums(self):
         self._navigation_stack = []
         self.current_view_mode = "all_albums"
         self.current_args = {}
         self.load_current_view()
-
-    def show_all_artists(self):
-        self.navigate_to_artists()
 
     def navigate_to_artists(self):
         self._navigation_stack.append({
@@ -217,6 +248,15 @@ class LibraryView(MDBoxLayout):
             'args': self.current_args.copy()
         })
         self.current_view_mode = "artists"
+        self.current_args = {}
+        self.load_current_view()
+
+    def navigate_to_all_songs(self):
+        self._navigation_stack.append({
+            'mode': self.current_view_mode,
+            'args': self.current_args.copy()
+        })
+        self.current_view_mode = "all_songs"
         self.current_args = {}
         self.load_current_view()
 
@@ -239,7 +279,7 @@ class LibraryView(MDBoxLayout):
         self.load_current_view()
 
     def on_song_selected(self, track_id, filepath):
-        if self.current_view_mode == 'search_results':
+        if self.current_view_mode in ['search_results', 'all_songs']:
             playlist_filepaths = [track['filepath'] for track in self._last_search_results]
         else:
             album_tracks_data = self.ids.library_rv.data
@@ -269,7 +309,7 @@ class LibraryView(MDBoxLayout):
         self.progress_value = 0
         self.library_manager.start_scan_music_library(full_rescan=True)
     
-    def on_song_selected_for_playback(self, track_id):
+    def on_song_selected_for_playback(self, *args):
         pass
 
     def on_search_text(self, query: str):
@@ -279,7 +319,8 @@ class LibraryView(MDBoxLayout):
     def _perform_search(self, query: str):
         query = query.strip()
         if not query:
-            self.go_back_library_navigation()
+            if self.current_view_mode == "search_results":
+                self.go_back_library_navigation()
             return
 
         if self.current_view_mode != "search_results":

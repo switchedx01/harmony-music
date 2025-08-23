@@ -17,7 +17,7 @@
         MDIconButton:
             icon: "arrow-left"
             on_release: root.go_back_library_navigation()
-            disabled: root.current_view_mode == 'all_albums'
+            disabled: not root.can_go_back
 
         MDLabel:
             text: root.display_path_text
@@ -26,8 +26,8 @@
             shorten: True
 
         MDRaisedButton:
-            text: "Artists"
-            on_release: root.show_all_artists()
+            text: root.cycle_view_text
+            on_release: root.cycle_view()
 
         MDRaisedButton:
             text: "Scan"

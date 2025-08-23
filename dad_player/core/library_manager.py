@@ -391,45 +391,53 @@ class LibraryManager(EventDispatcher):
             return [dict(row) for row in cursor.fetchall()]
 
     def search_tracks(self, query: str):
-        if not query:
-            return []
-        
-        search_term = f"%{query}%"
-        
         with self._db_lock, self._get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(f"""
-                SELECT 
-                    t.id, t.filepath, t.title, t.duration,
-                    al.name as album_name,
-                    ar.name as artist_name
-                FROM {DB_TRACKS_TABLE} t
-                LEFT JOIN {DB_ALBUMS_TABLE} al ON t.album_id = al.id
-                LEFT JOIN {DB_ARTISTS_TABLE} ar ON t.artist_id = ar.id
-                WHERE t.title LIKE ?
-                
-                UNION
-                
-                SELECT 
-                    t.id, t.filepath, t.title, t.duration,
-                    al.name as album_name,
-                    ar.name as artist_name
-                FROM {DB_TRACKS_TABLE} t
-                JOIN {DB_ALBUMS_TABLE} al ON t.album_id = al.id
-                LEFT JOIN {DB_ARTISTS_TABLE} ar ON t.artist_id = ar.id
-                WHERE al.name LIKE ?
+            if not query:
+                cursor.execute(f"""
+                    SELECT 
+                        t.id, t.filepath, t.title, t.duration,
+                        al.name as album_name,
+                        ar.name as artist_name
+                    FROM {DB_TRACKS_TABLE} t
+                    LEFT JOIN {DB_ALBUMS_TABLE} al ON t.album_id = al.id
+                    LEFT JOIN {DB_ARTISTS_TABLE} ar ON t.artist_id = ar.id
+                    ORDER BY ar.name COLLATE NOCASE, al.name COLLATE NOCASE, t.disc_number, t.track_number
+                """)
+            else:
+                search_term = f"%{query}%"
+                cursor.execute(f"""
+                    SELECT 
+                        t.id, t.filepath, t.title, t.duration,
+                        al.name as album_name,
+                        ar.name as artist_name
+                    FROM {DB_TRACKS_TABLE} t
+                    LEFT JOIN {DB_ALBUMS_TABLE} al ON t.album_id = al.id
+                    LEFT JOIN {DB_ARTISTS_TABLE} ar ON t.artist_id = ar.id
+                    WHERE t.title LIKE ?
+                    
+                    UNION
+                    
+                    SELECT 
+                        t.id, t.filepath, t.title, t.duration,
+                        al.name as album_name,
+                        ar.name as artist_name
+                    FROM {DB_TRACKS_TABLE} t
+                    JOIN {DB_ALBUMS_TABLE} al ON t.album_id = al.id
+                    LEFT JOIN {DB_ARTISTS_TABLE} ar ON t.artist_id = ar.id
+                    WHERE al.name LIKE ?
 
-                UNION
+                    UNION
 
-                SELECT 
-                    t.id, t.filepath, t.title, t.duration,
-                    al.name as album_name,
-                    ar.name as artist_name
-                FROM {DB_TRACKS_TABLE} t
-                JOIN {DB_ARTISTS_TABLE} ar ON t.artist_id = ar.id
-                LEFT JOIN {DB_ALBUMS_TABLE} al ON t.album_id = al.id
-                WHERE ar.name LIKE ?
-            """, (search_term, search_term, search_term))
+                    SELECT 
+                        t.id, t.filepath, t.title, t.duration,
+                        al.name as album_name,
+                        ar.name as artist_name
+                    FROM {DB_TRACKS_TABLE} t
+                    JOIN {DB_ARTISTS_TABLE} ar ON t.artist_id = ar.id
+                    LEFT JOIN {DB_ALBUMS_TABLE} al ON t.album_id = al.id
+                    WHERE ar.name LIKE ?
+                """, (search_term, search_term, search_term))
             
             results = [dict(row) for row in cursor.fetchall()]
             log.info(f"Search for '{query}' found {len(results)} tracks.")
@@ -461,7 +469,6 @@ class LibraryManager(EventDispatcher):
                 return str(art_path) if art_path.exists() else None
         return None
 
-    # --- ADDED METHOD ---
     def get_raw_album_art_for_file(self, filepath: str) -> bytes | None:
         """
         Retrieves the raw, unprocessed album art data for a given track.
@@ -473,7 +480,6 @@ class LibraryManager(EventDispatcher):
             if meta is None:
                 return None
             
-            # Look for album art in various common tags
             pictures = []
             if hasattr(meta, 'pictures'):
                 pictures = meta.pictures
@@ -483,7 +489,6 @@ class LibraryManager(EventDispatcher):
                 pictures = [meta.tags.get('covr')[0]]
 
             if pictures:
-                # Return the raw data of the first found picture
                 pic = pictures[0]
                 return pic.data if hasattr(pic, 'data') else bytes(pic)
                 
