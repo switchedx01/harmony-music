@@ -32,6 +32,9 @@ class DadPlayerApp(MDApp):
         self.default_accent_palette = "Blue"
 
     def build(self):
+        # Explicit import to ensure KivyMD's filemanager KV (including MDFileManagerItem) is loaded early
+        from kivymd.uix.filemanager import MDFileManager
+
         Window.size = (480, 800)
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = self.default_primary_palette
