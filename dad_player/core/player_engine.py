@@ -120,16 +120,21 @@ class PlayerEngine(EventDispatcher):
             self.dispatch("on_position_changed", pos_ms, self.current_media_duration_ms)
 
     def _load_media(self, file_path: str, play_immediately: bool = False):
+        log.debug(f"Inside _load_media for: {file_path}")
         self.stop()
         self.current_media_path = file_path
         self.current_song = file_path
         
         self.playlist_manager.add_track_to_recents(file_path)
 
+        log.debug("Creating new VLC media object.")
         media = self.vlc_instance.media_new_path(os.path.abspath(file_path))
+        log.debug("Setting media on player.")
         self.player.set_media(media)
+        log.debug("Releasing media object.")
         media.release()
 
+        log.debug("Getting media duration.")
         duration = self.player.get_length() or 0
         self.current_media_duration_ms = duration
         self._schedule_dispatch("on_media_loaded", self.current_media_path, duration)
@@ -194,7 +199,10 @@ class PlayerEngine(EventDispatcher):
         active_list = self._get_active_playlist()
         if 0 <= index < len(active_list):
             self._current_playlist_index = index
-            self._load_media(active_list[index], play_immediately=True)
+            filepath = active_list[index]
+            log.debug(f"Attempting to load media from index {index}, path: {filepath}")
+            self._load_media(filepath, play_immediately=True)
+            log.debug(f"Finished call to _load_media for: {filepath}")
 
     def play_next(self, from_song_end=False):
         active_list = self._get_active_playlist()

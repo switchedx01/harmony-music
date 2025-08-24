@@ -25,8 +25,9 @@ def setup_logging():
             os.makedirs(log_dir)
         
         log_file = os.path.join(log_dir, 'app.log')
+        # FIX: Specify UTF-8 encoding to handle special characters in file paths
         file_handler = RotatingFileHandler(
-            log_file, maxBytes=5*1024*1024, backupCount=2
+            log_file, maxBytes=5*1024*1024, backupCount=2, encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
@@ -39,4 +40,3 @@ def setup_logging():
         root_logger.addHandler(stream_handler)
     
     logging.info("Logging configured successfully.")
-
