@@ -16,7 +16,7 @@ class MainScreen(MDScreen):
     library_manager = ObjectProperty(None)
     settings_manager = ObjectProperty(None)
     playlist_manager = ObjectProperty(None)
-    top_bar_title = StringProperty("DaD Player")
+    top_bar_title = StringProperty("Harmony Player")
 
     def __init__(self, **kwargs):
         self._views = {}
