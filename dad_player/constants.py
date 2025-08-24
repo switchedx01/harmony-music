@@ -5,7 +5,7 @@
 # Application Metadata
 # =============================================================================
 APP_NAME = "Harmony Music Player"
-APP_VERSION = "1.0.0 Beta" 
+APP_VERSION = "1.0.1 Beta" 
 
 # =============================================================================
 # File and Directory Names
