@@ -1,0 +1,195 @@
+# dad_player/kv/screens/now_playing_view.kv
+#:import AspectRatioLayout dad_player.utils.layouts.AspectRatioLayout
+
+<NowPlayingView>:
+    orientation: 'vertical'
+    padding: "24dp"
+    spacing: "16dp"
+
+    canvas.before:
+        Color:
+            rgba: root.theme_cls.bg_normal
+        Rectangle:
+            size: self.size
+            pos: self.pos
+        Color:
+            rgba: 1, 1, 1, 0.3
+        Rectangle:
+            texture: root.blurred_bg_texture
+            size: self.size
+            pos: self.pos
+
+    # --- Album Art Section ---
+    AspectRatioLayout:
+        ratio: 1.0
+        size_hint: 1, 1
+
+        MDCard:
+            id: album_art_card
+            radius: [24] # Changeable: Corner roundness of the art container
+            elevation: 12 # Changeable: Shadow depth of the art container
+            md_bg_color: 0, 0, 0, 0.2
+            padding: "12dp"
+
+            Image:
+                id: album_art_np
+                color: 0, 0, 0, 0
+                fit_mode: "contain"
+                canvas.before:
+                    Color:
+                        rgba: 1, 1, 1, 1
+                    RoundedRectangle:
+                        texture: root.album_art_texture
+                        size: self.norm_image_size
+                        pos: self.center_x - self.norm_image_size[0] / 2., self.center_y - self.norm_image_size[1] / 2.
+                        radius: [18] # Changeable: Corner roundness of the album art itself
+
+
+    # --- Song Info Section ---
+    MDBoxLayout:
+        orientation: 'vertical'
+        adaptive_height: True
+        spacing: "4dp"
+        padding: ["16dp", 0]
+
+        MDLabel:
+            text: root.song_title_text
+            font_style: "H5"
+            bold: True
+            halign: 'center'
+            adaptive_height: True
+            shorten: True
+            shorten_from: 'right'
+            theme_text_color: "Primary"
+
+        MDLabel:
+            text: root.artist_name_text
+            font_style: "Subtitle1"
+            halign: 'center'
+            adaptive_height: True
+            shorten: True
+            shorten_from: 'right'
+            theme_text_color: "Secondary"
+
+    # --- Controls Section ---
+    MDBoxLayout:
+        orientation: 'vertical'
+        adaptive_height: True
+        spacing: "8dp"
+
+        # --- Progress Slider ---
+        MDRelativeLayout:
+            size_hint_y: None
+            height: "48dp"
+
+            MDBoxLayout:
+                orientation: 'horizontal'
+                size_hint_y: None
+                height: "48dp"
+                spacing: "12dp"
+                pos_hint: {'center_y': 0.5}
+
+                MDLabel:
+                    text: root.current_time_text
+                    font_style: "Caption"
+                    theme_text_color: "Secondary"
+                    size_hint_x: None
+                    width: dp(40)
+                    halign: 'left'
+
+                MDSlider:
+                    id: progress_slider
+                    max: root.progress_slider_max
+                    value: root.progress_slider_value
+                    pos_hint: {'center_y': 0.5}
+                    hint: False
+                    on_touch_down: root.start_seek(self, args[1])
+                    on_touch_move: root.update_seek_label(self, args[1])
+                    on_touch_up: root.end_seek(self, args[1])
+                    color: root.theme_cls.primary_color
+
+                MDLabel:
+                    text: root.total_time_text
+                    font_style: "Caption"
+                    theme_text_color: "Secondary"
+                    size_hint_x: None
+                    width: dp(40)
+                    halign: 'right'
+            
+            MDLabel:
+                id: seeker_hint_label
+                font_style: "Body2"
+                theme_text_color: "Custom"
+                text_color: root.theme_cls.primary_dark
+                halign: 'center'
+                size_hint: None, None
+                size: self.texture_size
+                pos_hint: {'center_x': progress_slider.value_pos[0] if progress_slider.max > 0 else 0.5}
+                y: progress_slider.top + dp(8)
+                opacity: 0
+                canvas.before:
+                    Color:
+                        rgba: root.theme_cls.primary_light
+                    RoundedRectangle:
+                        size: self.size[0] + dp(16), self.size[1] + dp(8)
+                        pos: self.x - dp(8), self.y - dp(4)
+                        radius: [dp(8)]
+
+        # --- Playback Buttons ---
+        MDBoxLayout:
+            adaptive_height: True
+            size_hint_x: None
+            width: self.minimum_width
+            pos_hint: {'center_x': 0.5}
+            spacing: "16dp"
+
+            MDIconButton:
+                icon: "shuffle-variant"
+                on_release: root.on_shuffle_button_press()
+                theme_text_color: "Primary" if root.shuffle_enabled else "Secondary"
+                icon_size: "28sp"
+
+            MDIconButton:
+                icon: "skip-previous"
+                on_release: root.on_previous_button_press()
+                icon_size: "40sp"
+
+            MDIconButton:
+                icon: root.play_pause_icon_text
+                on_release: root.on_play_pause_button_press()
+                icon_size: "64sp"
+                pos_hint: {'center_y': 0.5}
+                theme_text_color: "Primary"
+
+            MDIconButton:
+                icon: "skip-next"
+                on_release: root.on_next_button_press()
+                icon_size: "40sp"
+
+            MDIconButton:
+                icon: root.repeat_mode_icon
+                on_release: root.on_repeat_button_press()
+                theme_text_color: "Primary" if root.repeat_mode_icon != 'repeat-off' else "Secondary"
+                icon_size: "28sp"
+
+        # --- Volume Slider ---
+        MDBoxLayout:
+            size_hint_y: None
+            height: "48dp"
+            spacing: "12dp"
+            padding: ["8dp", 0]
+
+            MDIconButton:
+                icon: "volume-medium"
+                theme_text_color: "Secondary"
+                icon_size: "24sp"
+                pos_hint: {'center_y': 0.5}
+
+            MDSlider:
+                id: volume_slider
+                min: 0
+                max: 100
+                value: root.volume_slider_value
+                on_value: root.handle_volume_change(self)
+                color: root.theme_cls.primary_color
+                pos_hint: {'center_y': 0.5}

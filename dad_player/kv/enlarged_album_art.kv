@@ -1,0 +1,66 @@
+# dad_player/kv/enlarged_album_art.kv
+#:import AspectRatioLayout dad_player.utils.layouts.AspectRatioLayout
+
+<EnlargedAlbumArt>:
+    padding: "12dp"
+    spacing: "12dp"
+
+    MDScreenManager:
+        id: layout_manager
+
+        MDScreen:
+            name: 'mobile_layout'
+            MDBoxLayout:
+                orientation: 'vertical'
+                spacing: "12dp"
+
+                # --- Album Art (wrapped for square aspect ratio) ---
+                AspectRatioLayout:
+                    ratio: 1.0
+                    size_hint_y: 1
+                    Widget:
+                        size_hint: 1, 1
+                        canvas.before:
+                            Color:
+                                rgba: 1, 1, 1, 1
+                            RoundedRectangle:
+                                texture: root.art_texture
+                                size: self.size
+                                pos: self.pos
+                                radius: [18]
+                
+                # --- Bottom Menu (Pinned) ---
+                MDBoxLayout:
+                    id: bottom_menu
+                    adaptive_height: True
+                    spacing: "16dp"
+                    pos_hint: {'center_x': 0.5}
+
+        MDScreen:
+            name: 'desktop_layout'
+            MDBoxLayout:
+                orientation: 'horizontal'
+                spacing: "12dp"
+
+                # --- Album Art (wrapped for square aspect ratio) ---
+                AspectRatioLayout:
+                    ratio: 1.0
+                    size_hint_x: 1
+                    Widget:
+                        size_hint: 1, 1
+                        canvas.before:
+                            Color:
+                                rgba: 1, 1, 1, 1
+                            RoundedRectangle:
+                                texture: root.art_texture
+                                size: self.size
+                                pos: self.pos
+                                radius: [18]
+
+                # --- Right Menu (Pinned) ---
+                MDBoxLayout:
+                    id: right_menu
+                    orientation: 'vertical'
+                    adaptive_width: True
+                    spacing: "16dp"
+                    pos_hint: {'center_y': 0.5}

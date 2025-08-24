@@ -1,0 +1,21 @@
+# dad_player/kv/context_menu.kv
+
+<ContextMenu>:
+    orientation: 'vertical'
+    spacing: "4dp"
+
+    MDRaisedButton:
+        text: "Bring to Front"
+        on_release: root.bring_to_front()
+        md_bg_color: "#3e3e3e"
+        theme_text_color: "Custom"
+        text_color: "white"
+        elevation: 0
+
+    MDRaisedButton:
+        text: "Close Menu"
+        on_release: root.dismiss()
+        md_bg_color: "#3e3e3e"
+        theme_text_color: "Custom"
+        text_color: "white"
+        elevation: 0
