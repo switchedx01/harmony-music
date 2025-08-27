@@ -1,6 +1,5 @@
-# dad_player/ui/widgets/enlarged_album_art.py
-
 import logging
+import traceback
 from kivy.properties import ObjectProperty, StringProperty, ListProperty
 from kivy.uix.modalview import ModalView
 from kivy.core.window import Window
@@ -116,9 +115,7 @@ class EnlargedAlbumArt(MDCard):
                 else:
                     callback()
 
-    # --- Playlist Logic ---
     def add_to_playlist(self):
-        """Opens a dialog to select a playlist to add the current song to."""
         if not self.track_path:
             log.warning("Add to playlist called, but no track_path was provided.")
             return
@@ -152,12 +149,12 @@ class EnlargedAlbumArt(MDCard):
         self._playlist_dialog.open()
 
     def _add_to_selected_playlist(self, playlist_name):
-        """Callback to add the current track to the chosen playlist."""
         if self._playlist_dialog:
             self._playlist_dialog.dismiss()
             
         if self.playlist_manager and self.track_path:
             try:
+                log.debug(f"HANDOFF: EnlargedAlbumArt -> PlaylistManager.add_track_to_playlist('{playlist_name}'). Stack:\n{''.join(traceback.format_stack(limit=5))}")
                 self.playlist_manager.add_track_to_playlist(playlist_name, self.track_path)
                 log.info(f"Added '{self.track_path}' to playlist '{playlist_name}'.")
             except Exception as e:

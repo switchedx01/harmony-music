@@ -1,14 +1,12 @@
 # dad_player/kv/playlist_view.kv
 
-#:import dp kivy.metrics.dp
-#:import get_color_from_hex kivy.utils.get_color_from_hex
 #:import SongRowItem dad_player.ui.widgets.song_list_item.SongRowItem
 
 <PlaylistView>
     MDBoxLayout:
         MDNavigationRail:
             id: nav_rail
-            md_bg_color: get_color_from_hex("#202020")
+            md_bg_color: self.theme_cls.bg_dark
             selected_color_background: root.theme_cls.primary_color
             ripple_color_item: root.theme_cls.primary_light
             
@@ -16,11 +14,11 @@
                 text: "Queue"
                 icon: "playlist-play"
                 on_active: if self.active: root.select_playlist("Queue")
+                
             MDNavigationRailItem:
                 text: "Recents"
                 icon: "history"
                 on_active: if self.active: root.select_playlist("Recents")
-
 
         MDBoxLayout:
             orientation: 'vertical'
@@ -29,6 +27,7 @@
             MDBoxLayout:
                 adaptive_height: True
                 spacing: "12dp"
+                
                 MDLabel:
                     id: header_title
                     text: root.active_playlist_name
@@ -36,6 +35,7 @@
                     bold: True
                     adaptive_height: True
                     shorten: True
+                    
                 MDIconButton:
                     icon: "dots-vertical"
                     on_release: root.open_playlist_menu(self)
@@ -45,6 +45,8 @@
             RecycleView:
                 id: playlist_rv
                 viewclass: 'SongRowItem'
+                data: root.song_list_data
+                
                 bar_width: dp(10)
                 scroll_type: ['bars', 'content']
 
@@ -58,8 +60,7 @@
 
     MDFloatingActionButton:
         icon: "plus"
-        pos_hint: {"right": 1, "bottom": 1}
         md_bg_color: root.theme_cls.primary_color
         on_release: root.show_create_playlist_dialog()
         elevation: 8
-        pos: self.width + dp(20), self.height + dp(20)
+        pos_hint: {"right": 1.05, "bottom": 0.05}
