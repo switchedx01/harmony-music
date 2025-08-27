@@ -16,6 +16,11 @@ ART_THUMBNAIL_DIR = "art_thumbnails"
 PLACEHOLDER_ALBUM_FILENAME = "placeholder_album.png"
 
 # =============================================================================
+# UI Layout
+# =============================================================================
+LAYOUT_BREAKPOINT = 900 # Width threshold for switching to desktop layout
+
+# =============================================================================
 # Image Sizes
 # =============================================================================
 ALBUM_ART_THUMBNAIL_SIZE = 200  # For library grid view

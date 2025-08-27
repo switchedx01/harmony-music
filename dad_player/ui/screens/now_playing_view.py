@@ -65,11 +65,13 @@ class NowPlayingView(MDBoxLayout):
         if hasattr(app, 'floating_widget') and app.floating_widget:
             app.floating_widget.dismiss()
         
+        # CORRECTED: Pass the names of the methods as strings.
+        # This allows EnlargedAlbumArt to use its own internal methods.
         menu_items = [
             {'icon': 'playlist-plus', 'callback': 'add_to_playlist'},
-            {'icon': 'account-music', 'callback': self.view_artist},
-            {'icon': 'album', 'callback': self.view_album},
-            {'icon': 'information-outline', 'callback': self.show_details},
+            # {'icon': 'account-music', 'callback': 'view_artist'}, # Placeholder removed
+            # {'icon': 'album', 'callback': 'view_album'}, # Placeholder removed
+            {'icon': 'information-outline', 'callback': 'show_details'}, # This is the key change
         ]
 
         art_widget = EnlargedAlbumArt(
@@ -79,16 +81,6 @@ class NowPlayingView(MDBoxLayout):
             playlist_manager=self.playlist_manager
         )
         art_widget.open()
-
-    # --- Placeholder Callbacks for Menu Items ---
-    def view_artist(self):
-        print("ACTION: View Artist")
-
-    def view_album(self):
-        print("ACTION: View Album")
-
-    def show_details(self):
-        print("ACTION: Show Details")
 
     def _post_init(self, dt):
         """Perform initialization after the widget is created."""

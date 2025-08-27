@@ -1,0 +1,93 @@
+# dad_player/kv/track_details_view.kv
+
+<DetailsTextField@MDTextField>:
+    disabled: True
+    line_color_normal: 0, 0, 0, 0
+    fill_color_normal: 0, 0, 0, 0
+    text_color_normal: self.theme_cls.secondary_text_color
+    text_color_disabled: self.theme_cls.text_color
+
+<TrackDetailsView>:
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        MDTopAppBar:
+            id: top_bar
+            title: "Track Details"
+            left_action_items: [["arrow-left", lambda x: root.close_view()]]
+            right_action_items: [["pencil", lambda x: root.set_mode('edit')]]
+
+        ScrollView:
+            MDBoxLayout:
+                orientation: 'vertical'
+                adaptive_height: True
+                padding: "24dp"
+                spacing: "24dp"
+
+                MDRelativeLayout:
+                    size_hint_y: None
+                    height: self.width * 0.75
+                    
+                    Image:
+                        id: album_art_image
+                        source: root.album_art_path
+                        allow_stretch: True
+                        keep_ratio: True
+
+                    MDIconButton:
+                        id: edit_art_button
+                        icon: "pencil"
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                        theme_icon_color: "Custom"
+                        icon_color: 1, 1, 1, 1
+                        md_bg_color: 0, 0, 0, 0.5
+                        opacity: 0
+                        disabled: True
+                        on_release: root.change_album_art()
+
+                DetailsTextField:
+                    id: title_field
+                    hint_text: "Title"
+
+                DetailsTextField:
+                    id: artist_field
+                    hint_text: "Artist"
+
+                DetailsTextField:
+                    id: album_field
+                    hint_text: "Album"
+                
+                DetailsTextField:
+                    id: album_artist_field
+                    hint_text: "Album Artist"
+                
+                DetailsTextField:
+                    id: composer_field
+                    hint_text: "Composer"
+
+                DetailsTextField:
+                    id: genre_field
+                    hint_text: "Genre"
+
+                MDBoxLayout:
+                    adaptive_height: True
+                    spacing: "24dp"
+                    DetailsTextField:
+                        id: year_field
+                        hint_text: "Year"
+                    DetailsTextField:
+                        id: track_number_field
+                        hint_text: "Track"
+                    DetailsTextField:
+                        id: disc_number_field
+                        hint_text: "Disc"
+                
+                DetailsTextField:
+                    id: duration_field
+                    hint_text: "Duration"
+                    disabled: True 
+                
+                DetailsTextField:
+                    id: filepath_field
+                    hint_text: "File Path"
+                    disabled: True

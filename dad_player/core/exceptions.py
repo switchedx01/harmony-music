@@ -34,3 +34,8 @@ class PlaylistExistsError(PlaylistError):
 class PlaylistNotFoundError(PlaylistError):
     """Raised when a specified playlist cannot be found."""
     pass
+
+# --- Metadata Errors ---
+class MetadataUpdateError(DadPlayerError):
+    """Raised when a metadata tag fails to save to a file."""
+    pass

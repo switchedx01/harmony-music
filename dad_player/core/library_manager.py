@@ -6,6 +6,7 @@ import sqlite3
 import threading
 from pathlib import Path
 import mutagen
+from mutagen.id3 import TIT2, TPE1, TALB, TPE2, TCOM, TCON, TDRC, TRCK, TPOS, APIC, ID3, PictureType
 from kivy.clock import Clock
 from kivy.event import EventDispatcher
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
@@ -24,6 +25,8 @@ from dad_player.constants import (
 from dad_player.utils.file_utils import (
     get_user_data_dir_for_app, generate_file_hash, sanitize_filename_for_cache
 )
+from dad_player.core.exceptions import MetadataUpdateError
+
 
 log = logging.getLogger(__name__)
 
@@ -447,10 +450,11 @@ class LibraryManager(EventDispatcher):
         with self._db_lock, self._get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT t.*, al.name as album, ar.name as artist
+                SELECT t.*, al.name as album, ar.name as artist, aa.name as album_artist
                 FROM tracks t
                 LEFT JOIN albums al ON t.album_id = al.id
                 LEFT JOIN artists ar ON t.artist_id = ar.id
+                LEFT JOIN artists aa ON al.artist_id = aa.id
                 WHERE t.filepath = ?
             """, (filepath,))
             row = cursor.fetchone()
@@ -470,9 +474,6 @@ class LibraryManager(EventDispatcher):
         return None
 
     def get_raw_album_art_for_file(self, filepath: str) -> bytes | None:
-        """
-        Retrieves the raw, unprocessed album art data for a given track.
-        """
         if not filepath or not os.path.exists(filepath):
             return None
         try:
@@ -496,6 +497,75 @@ class LibraryManager(EventDispatcher):
             log.error(f"Failed to extract raw album art from {filepath}: {e}")
         
         return None
+    
+    def update_track_metadata(self, filepath: str, new_metadata: dict):
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Track file not found: {filepath}")
+
+        try:
+            meta = mutagen.File(filepath, easy=False)
+            if meta is None:
+                raise MetadataUpdateError(f"Could not load metadata for: {filepath}")
+
+            if 'title' in new_metadata:
+                meta['TIT2'] = TIT2(encoding=3, text=new_metadata['title'])
+            if 'artist' in new_metadata:
+                meta['TPE1'] = TPE1(encoding=3, text=new_metadata['artist'])
+            if 'album' in new_metadata:
+                meta['TALB'] = TALB(encoding=3, text=new_metadata['album'])
+            if 'album_artist' in new_metadata:
+                meta['TPE2'] = TPE2(encoding=3, text=new_metadata['album_artist'])
+            if 'composer' in new_metadata:
+                meta['TCOM'] = TCOM(encoding=3, text=new_metadata['composer'])
+            if 'genre' in new_metadata:
+                meta['TCON'] = TCON(encoding=3, text=new_metadata['genre'])
+            if 'year' in new_metadata:
+                meta['TDRC'] = TDRC(encoding=3, text=str(new_metadata['year']))
+            if 'track_number' in new_metadata:
+                meta['TRCK'] = TRCK(encoding=3, text=str(new_metadata['track_number']))
+            if 'disc_number' in new_metadata:
+                meta['TPOS'] = TPOS(encoding=3, text=str(new_metadata['disc_number']))
+
+            meta.save()
+            log.info(f"Successfully saved new metadata for {filepath}")
+            self._process_audio_file(filepath)
+
+        except Exception as e:
+            log.error(f"Failed to update metadata for {filepath}: {e}")
+            raise MetadataUpdateError(f"Failed to save tags for {os.path.basename(filepath)}.") from e
+
+    def update_track_album_art(self, track_filepath: str, image_filepath: str):
+        if not os.path.exists(track_filepath):
+            raise FileNotFoundError(f"Track file not found: {track_filepath}")
+        if not os.path.exists(image_filepath):
+            raise FileNotFoundError(f"Image file not found: {image_filepath}")
+            
+        try:
+            audio = ID3(track_filepath)
+        except Exception:
+            audio = ID3()
+
+        audio.delall("APIC")
+        
+        with open(image_filepath, 'rb') as art_file:
+            art_data = art_file.read()
+
+        mime_type = 'image/jpeg' if image_filepath.lower().endswith('.jpg') or image_filepath.lower().endswith('.jpeg') else 'image/png'
+
+        audio.add(
+            APIC(
+                encoding=3,
+                mime=mime_type,
+                type=PictureType.COVER_FRONT,
+                desc='Cover',
+                data=art_data
+            )
+        )
+        audio.save(v2_version=3)
+        log.info(f"Successfully updated album art for {track_filepath}")
+        
+        self._process_audio_file(track_filepath)
+
 
     def close(self):
         log.info("LibraryManager is closing.")

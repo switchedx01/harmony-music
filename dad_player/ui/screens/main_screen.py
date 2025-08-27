@@ -1,15 +1,18 @@
 # dad_player/ui/screens/main_screen.py
 
 import logging
+import traceback
 from kivy.clock import Clock
 from kivy.core.window import Window
-from kivy.metrics import dp
 from kivy.properties import ObjectProperty, StringProperty
+from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.button import MDFlatButton
+from dad_player.constants import LAYOUT_BREAKPOINT
+from dad_player.core.exceptions import MetadataUpdateError
 
 log = logging.getLogger(__name__)
-
-LAYOUT_BREAKPOINT = dp(600)
 
 class MainScreen(MDScreen):
     player_engine = ObjectProperty(None)
