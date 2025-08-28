@@ -6,7 +6,8 @@ import sqlite3
 import threading
 from pathlib import Path
 import mutagen
-from mutagen.id3 import TIT2, TPE1, TALB, TPE2, TCOM, TCON, TDRC, TRCK, TPOS, APIC, ID3, PictureType
+from mutagen.id3 import APIC, ID3, PictureType
+from mutagen.flac import Picture as FLACPicture
 from kivy.clock import Clock
 from kivy.event import EventDispatcher
 from kivy.properties import BooleanProperty, NumericProperty, StringProperty
@@ -30,22 +31,44 @@ from dad_player.core.exceptions import MetadataUpdateError
 
 log = logging.getLogger(__name__)
 
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
 def _get_tag_values(meta, key_list):
     if not meta:
         return []
     values = []
     for key in key_list:
-        raw_val = meta.get(key)
-        if not raw_val:
+        try:
+            raw_val = meta.get(key)
+            if not raw_val:
+                continue
+            potential_values = raw_val if isinstance(raw_val, list) else [raw_val]
+            for item in potential_values:
+                if hasattr(item, 'text') and item.text:
+                    text_val = item.text if isinstance(item.text, list) else [item.text]
+                    values.extend(str(t) for t in text_val)
+                elif not hasattr(item, 'text'):
+                    values.append(str(item))
+        except (KeyError, ValueError):
             continue
-        potential_values = raw_val if isinstance(raw_val, list) else [raw_val]
-        for item in potential_values:
-            if hasattr(item, 'text') and item.text:
-                text_val = item.text if isinstance(item.text, list) else [item.text]
-                values.extend(str(t) for t in text_val)
-            elif not hasattr(item, 'text'):
-                values.append(str(item))
     return values
+
+def _safe_convert(value, target_type, split_char=None):
+    if not value:
+        return None
+    try:
+        s_val = str(value)
+        if split_char:
+            s_val = s_val.split(split_char)[0]
+        return target_type(s_val)
+    except (ValueError, IndexError):
+        return None
+
+# =============================================================================
+# LibraryManager Class
+# =============================================================================
 
 class LibraryManager(EventDispatcher):
     __events__ = ('on_scan_progress', 'on_scan_finished')
@@ -166,6 +189,7 @@ class LibraryManager(EventDispatcher):
         try:
             file_hash = generate_file_hash(filepath)
             last_modified = os.path.getmtime(filepath)
+            
             with self._db_lock, self._get_db_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(f"SELECT filehash, last_modified FROM {DB_TRACKS_TABLE} WHERE filepath = ?", (filepath,))
@@ -173,15 +197,21 @@ class LibraryManager(EventDispatcher):
                 if row and row['filehash'] == file_hash and row['last_modified'] == last_modified:
                     return
                 
-                meta = mutagen.File(filepath, easy=False)
-                if meta is None:
-                    log.warning(f"Could not load metadata for: {filepath}")
+                try:
+                    meta = mutagen.File(filepath, easy=False)
+                    if meta is None:
+                        log.warning(f"SKIPPED: Could not load metadata for: {os.path.basename(filepath)}")
+                        return
+                except Exception as e:
+                    log.warning(f"SKIPPED: Failed to read metadata for {os.path.basename(filepath)} due to error: {e}")
                     return
                 
                 self._update_track_in_db(conn, filepath, meta, file_hash, last_modified)
                 conn.commit()
-        except Exception as e:
-            log.error(f"Error processing file {filepath}: {e}")
+                log.info(f"ADDED/UPDATED: {os.path.basename(filepath)}")
+
+        except Exception:
+            log.exception(f"FAILED: Unexpected error processing file {os.path.basename(filepath)}")
 
     def _update_track_in_db(self, conn, filepath, meta, file_hash, last_modified):
         titles = _get_tag_values(meta, ['TIT2', 'title', '©nam'])
@@ -200,7 +230,7 @@ class LibraryManager(EventDispatcher):
         composer = ', '.join(composers) if composers else None
 
         bpm_vals = _get_tag_values(meta, ['TBPM', 'bpm'])
-        bpm = float(bpm_vals[0]) if bpm_vals else None
+        bpm = _safe_convert(bpm_vals[0] if bpm_vals else None, float)
 
         comment_vals = _get_tag_values(meta, ['COMM', 'comment', '©cmt'])
         comment = '\n'.join(comment_vals) if comment_vals else None
@@ -215,16 +245,16 @@ class LibraryManager(EventDispatcher):
         copyright = ', '.join(copyright_vals) if copyright_vals else None
 
         years = _get_tag_values(meta, ['TYER', 'TDAT', 'TDRC', 'date', '©day'])
-        year = int(years[0][:4]) if years and years[0] else None
+        year = _safe_convert(years[0][:4] if years and years[0] else None, int)
 
         genres = _get_tag_values(meta, ['TCON', 'genre', '©gen'])
         genre = genres[0] if genres else None
 
         track_numbers = _get_tag_values(meta, ['TRCK', 'tracknumber', '©trk'])
-        track_number = int(track_numbers[0].split('/')[0]) if track_numbers and '/' in track_numbers[0] else int(track_numbers[0]) if track_numbers else None
+        track_number = _safe_convert(track_numbers[0] if track_numbers else None, int, split_char='/')
 
         disc_numbers = _get_tag_values(meta, ['TPOS', 'discnumber', '©dsk'])
-        disc_number = int(disc_numbers[0].split('/')[0]) if disc_numbers and '/' in disc_numbers[0] else int(disc_numbers[0]) if disc_numbers else None
+        disc_number = _safe_convert(disc_numbers[0] if disc_numbers else None, int, split_char='/')
 
         duration = meta.info.length if hasattr(meta.info, 'length') else 0
 
@@ -239,7 +269,7 @@ class LibraryManager(EventDispatcher):
 
         art_filename = None
         pictures = None
-        if hasattr(meta, 'pictures'):
+        if hasattr(meta, 'pictures') and meta.pictures:
             pictures = meta.pictures
         elif 'APIC:' in meta:
             pictures = [meta['APIC:']]
@@ -249,7 +279,7 @@ class LibraryManager(EventDispatcher):
         if pictures:
             pic = pictures[0]
             art_data = pic.data if hasattr(pic, 'data') else bytes(pic)
-            art_filename = self._extract_and_save_album_art(filepath, art_data, album_name)
+            art_filename = self._extract_and_save_album_art(filepath, art_data, album_name, album_artist_name)
             if art_filename:
                 cursor = conn.cursor()
                 cursor.execute(f"UPDATE {DB_ALBUMS_TABLE} SET art_filename = COALESCE(art_filename, ?) WHERE id = ?", (art_filename, album_id))
@@ -289,7 +319,7 @@ class LibraryManager(EventDispatcher):
         cursor.execute(f"INSERT INTO {DB_ALBUMS_TABLE} (name, artist_id, art_filename, year) VALUES (?, ?, ?, ?)", (name, artist_id, art_filename, year))
         return cursor.lastrowid
 
-    def _extract_and_save_album_art(self, filepath, art_data, album_name):
+    def _extract_and_save_album_art(self, filepath, art_data, album_name, artist_name):
         if PILImage is None:
             log.warning("PIL not available, skipping album art extraction.")
             return None
@@ -305,7 +335,7 @@ class LibraryManager(EventDispatcher):
                 img.save(thumbnail_stream, format='JPEG', quality=85)
                 thumbnail_stream.seek(0)
 
-            filename = sanitize_filename_for_cache(f"{album_name}.jpg")
+            filename = sanitize_filename_for_cache(f"{artist_name}_{album_name}.jpg")
             art_path = self.art_cache_dir / filename
             
             with open(art_path, 'wb') as f:
@@ -359,9 +389,6 @@ class LibraryManager(EventDispatcher):
             return [dict(row) for row in cursor.fetchall()]
 
     def get_all_albums(self, consolidated=False):
-        """
-        Fetches all albums. If consolidated is True, groups albums by name.
-        """
         with self._db_lock, self._get_db_connection() as conn:
             cursor = conn.cursor()
             if not consolidated:
@@ -371,8 +398,6 @@ class LibraryManager(EventDispatcher):
                     ORDER BY al.name COLLATE NOCASE
                 """)
             else:
-                # This query groups by album name, picks a representative ID and art,
-                # and labels the artist as 'Various Artists' if multiple artists are involved.
                 cursor.execute("""
                     SELECT
                         MIN(al.id) as id,
@@ -535,7 +560,7 @@ class LibraryManager(EventDispatcher):
                 return None
             
             pictures = []
-            if hasattr(meta, 'pictures'):
+            if hasattr(meta, 'pictures') and meta.pictures:
                 pictures = meta.pictures
             elif 'APIC:' in meta:
                 pictures = [meta['APIC:']]
@@ -556,30 +581,22 @@ class LibraryManager(EventDispatcher):
             raise FileNotFoundError(f"Track file not found: {filepath}")
 
         try:
-            meta = mutagen.File(filepath, easy=False)
-            if meta is None:
+            audio = mutagen.File(filepath, easy=True)
+            if audio is None:
                 raise MetadataUpdateError(f"Could not load metadata for: {filepath}")
+            
+            tag_map = {
+                'title': 'title', 'artist': 'artist', 'album': 'album',
+                'album_artist': 'albumartist', 'composer': 'composer',
+                'genre': 'genre', 'year': 'date', 'track_number': 'tracknumber',
+                'disc_number': 'discnumber'
+            }
 
-            if 'title' in new_metadata:
-                meta['TIT2'] = TIT2(encoding=3, text=new_metadata['title'])
-            if 'artist' in new_metadata:
-                meta['TPE1'] = TPE1(encoding=3, text=new_metadata['artist'])
-            if 'album' in new_metadata:
-                meta['TALB'] = TALB(encoding=3, text=new_metadata['album'])
-            if 'album_artist' in new_metadata:
-                meta['TPE2'] = TPE2(encoding=3, text=new_metadata['album_artist'])
-            if 'composer' in new_metadata:
-                meta['TCOM'] = TCOM(encoding=3, text=new_metadata['composer'])
-            if 'genre' in new_metadata:
-                meta['TCON'] = TCON(encoding=3, text=new_metadata['genre'])
-            if 'year' in new_metadata:
-                meta['TDRC'] = TDRC(encoding=3, text=str(new_metadata['year']))
-            if 'track_number' in new_metadata:
-                meta['TRCK'] = TRCK(encoding=3, text=str(new_metadata['track_number']))
-            if 'disc_number' in new_metadata:
-                meta['TPOS'] = TPOS(encoding=3, text=str(new_metadata['disc_number']))
+            for key, easy_key in tag_map.items():
+                if key in new_metadata:
+                    audio[easy_key] = str(new_metadata[key])
 
-            meta.save()
+            audio.save()
             log.info(f"Successfully saved new metadata for {filepath}")
             self._process_audio_file(filepath)
 
@@ -594,30 +611,37 @@ class LibraryManager(EventDispatcher):
             raise FileNotFoundError(f"Image file not found: {image_filepath}")
             
         try:
-            audio = ID3(track_filepath)
-        except Exception:
-            audio = ID3()
+            audio = mutagen.File(track_filepath)
+            if audio is None:
+                raise MetadataUpdateError("Could not process audio file.")
 
-        audio.delall("APIC")
-        
-        with open(image_filepath, 'rb') as art_file:
-            art_data = art_file.read()
+            with open(image_filepath, 'rb') as art_file:
+                art_data = art_file.read()
 
-        mime_type = 'image/jpeg' if image_filepath.lower().endswith('.jpg') or image_filepath.lower().endswith('.jpeg') else 'image/png'
+            mime_type = 'image/jpeg' if image_filepath.lower().endswith(('.jpg', '.jpeg')) else 'image/png'
 
-        audio.add(
-            APIC(
-                encoding=3,
-                mime=mime_type,
-                type=PictureType.COVER_FRONT,
-                desc='Cover',
-                data=art_data
-            )
-        )
-        audio.save(v2_version=3)
-        log.info(f"Successfully updated album art for {track_filepath}")
-        
-        self._process_audio_file(track_filepath)
+            if hasattr(audio, 'pictures'):
+                pic = FLACPicture()
+                pic.data = art_data
+                pic.mime = mime_type
+                pic.type = 3
+                audio.clear_pictures()
+                audio.add_picture(pic)
+            elif isinstance(audio.tags, ID3):
+                audio.tags.delall("APIC")
+                audio.tags.add(
+                    APIC(encoding=3, mime=mime_type, type=PictureType.COVER_FRONT, desc='Cover', data=art_data)
+                )
+            else:
+                raise MetadataUpdateError(f"Unsupported format for embedding art: {type(audio)}")
+
+            audio.save()
+            log.info(f"Successfully updated album art for {track_filepath}")
+            self._process_audio_file(track_filepath)
+
+        except Exception as e:
+            log.error(f"Failed to update album art for {track_filepath}: {e}", exc_info=True)
+            raise MetadataUpdateError(f"Failed to save album art for {os.path.basename(track_filepath)}.") from e
 
 
     def close(self):
