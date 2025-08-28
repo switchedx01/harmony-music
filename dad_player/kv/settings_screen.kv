@@ -20,48 +20,121 @@
                 settings_manager: root.settings_manager
                 library_manager: root.library_manager
 
+<SettingsLabel@MDLabel>:
+    font_style: "Button"
+    theme_text_color: "Secondary"
+    padding: dp(16), dp(8)
+    size_hint_y: None
+    height: self.texture_size[1]
+
+<SettingsItem@MDBoxLayout>:
+    size_hint_y: None
+    height: dp(56)
+    padding: dp(16), 0, dp(8), 0
+    spacing: dp(16)
+
 <CustomSettingsPanel>:
-    cols: 1
+    orientation: 'vertical'
     adaptive_height: True
     padding: dp(16)
     spacing: dp(16)
 
-    MDBoxLayout:
+    SettingsLabel:
+        text: "PLAYBACK"
+
+    MDCard:
+        orientation: 'vertical'
+        size_hint_y: None
         adaptive_height: True
+        padding: dp(8), dp(8), dp(8), dp(8)
         spacing: dp(8)
+        radius: [12,]
+        elevation: 2
+        md_bg_color: app.theme_cls.bg_light
 
-        MDLabel:
-            text: "Autoplay"
-            size_hint_x: 0.7
-        MDSwitch:
-            active: root.autoplay_active
-            on_active: root.autoplay_active = self.active
+        SettingsItem:
+            MDLabel:
+                text: "Autoplay"
+                font_style: "Body1"
+                valign: 'center'
+
+            MDBoxLayout:
+                size_hint_x: None
+                width: dp(64)
+                MDSwitch:
+                    active: root.autoplay_active
+                    on_active: root.autoplay_active = self.active
+                    pos_hint: {'center_x': .5, 'center_y': .5}
+        
+        MDSeparator:
+
+        SettingsItem:
+            MDLabel:
+                text: "Shuffle"
+                font_style: "Body1"
+                valign: 'center'
+
+            MDBoxLayout:
+                size_hint_x: None
+                width: dp(64)
+                MDSwitch:
+                    active: root.shuffle_active
+                    on_active: root.shuffle_active = self.active
+                    pos_hint: {'center_x': .5, 'center_y': .5}
+
+        MDSeparator:
+
+        SettingsItem:
+            MDLabel:
+                text: root.repeat_mode_text
+                font_style: "Body1"
+                valign: 'center'
+            MDBoxLayout:
+                size_hint_x: None
+                width: dp(64)
+                MDIconButton:
+                    icon: "repeat"
+                    on_release: root.cycle_repeat_mode()
+                    pos_hint: {'center_x': .5, 'center_y': .5}
+
+
+    SettingsLabel:
+        text: "LIBRARY"
+
+    MDCard:
+        orientation: 'vertical'
+        size_hint_y: None
+        adaptive_height: True
+        padding: dp(16)
+        spacing: dp(8)
+        radius: [12,]
+        elevation: 2
+        md_bg_color: app.theme_cls.bg_light
+
+        MDRaisedButton:
+            text: "Manage Music Folders"
+            on_release: root.open_manage_folders_popup()
+            style: "tonal"
+            size_hint_y: None
+            height: dp(48)
+            pos_hint: {'center_x': 0.5}
+
+        MDRaisedButton:
+            text: "Scan Library For New Music"
+            on_release: root.start_library_scan()
+            style: "tonal"
+            size_hint_y: None
+            height: dp(48)
+            pos_hint: {'center_x': 0.5}
 
     MDBoxLayout:
-        adaptive_height: True
-        spacing: dp(8)
+        size_hint_y: 1 # Spacer
 
-        MDLabel:
-            text: "Shuffle"
-            size_hint_x: 0.7
-        MDSwitch:
-            active: root.shuffle_active
-            on_active: root.shuffle_active = self.active
-
-    MDRaisedButton:
-        text: root.repeat_mode_text
+    MDLabel:
+        text: "made by SwitchX01 with love"
+        font_style: "Caption"
+        halign: "center"
         size_hint_y: None
-        height: dp(48)
-        on_release: root.cycle_repeat_mode()
-
-    MDRaisedButton:
-        text: "Manage Music Folders"
-        size_hint_y: None
-        height: dp(48)
-        on_release: root.open_manage_folders_popup()
-
-    MDRaisedButton:
-        text: "Scan Library"
-        size_hint_y: None
-        height: dp(48)
-        on_release: root.start_library_scan()
+        height: self.texture_size[1]
+        padding: dp(24)
+        theme_text_color: "Secondary"

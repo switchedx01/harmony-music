@@ -1,7 +1,7 @@
 # dad_player/ui/widgets/settings_panel.py
 
 import logging
-from kivymd.uix.gridlayout import MDGridLayout
+from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.properties import ObjectProperty, BooleanProperty, StringProperty
 from kivy.clock import Clock
 
@@ -9,7 +9,7 @@ from dad_player.constants import REPEAT_MODES_TEXT
 
 log = logging.getLogger(__name__)
 
-class CustomSettingsPanel(MDGridLayout):
+class CustomSettingsPanel(MDBoxLayout):
     settings_manager = ObjectProperty(None)
     library_manager = ObjectProperty(None)
 
@@ -20,17 +20,6 @@ class CustomSettingsPanel(MDGridLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         Clock.schedule_once(self.load_settings_values)
-        # Add footnote label
-        from kivymd.uix.label import MDLabel
-        from kivy.metrics import dp
-        footnote = MDLabel(
-            text="made by SwitchX01 with love",
-            font_style="Caption",
-            halign="center",
-            size_hint_y=None,
-            height=dp(30)
-        )
-        self.add_widget(footnote)
 
     def load_settings_values(self, *args):
         """Load initial values from the SettingsManager."""
