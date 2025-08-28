@@ -29,7 +29,7 @@ ALBUM_ART_NOW_PLAYING_SIZE = 400 # For the main now playing art
 # =============================================================================
 # Supported Formats
 # =============================================================================
-SUPPORTED_AUDIO_EXTENSIONS = (".mp3", ".wav", ".ogg", ".flac", ".m4a", "aac")
+SUPPORTED_AUDIO_EXTENSIONS = (".mp3", ".wav", ".ogg", ".flac", ".m4a", "aac",)
 
 # =============================================================================
 # Settings Keys

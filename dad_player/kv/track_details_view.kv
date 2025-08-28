@@ -6,6 +6,13 @@
     fill_color_normal: 0, 0, 0, 0
     text_color_normal: self.theme_cls.secondary_text_color
     text_color_disabled: self.theme_cls.text_color
+    canvas.after:
+        Clear
+        Color:
+            rgba: self.line_color_normal if not self.focus else self.line_color_focus
+        Rectangle:
+            pos: self.x, self.y
+            size: self.width, max(dp(1), 1)
 
 <TrackDetailsView>:
     MDBoxLayout:

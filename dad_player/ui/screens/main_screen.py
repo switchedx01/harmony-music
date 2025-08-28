@@ -1,18 +1,26 @@
 # dad_player/ui/screens/main_screen.py
 
 import logging
-import traceback
+import sys
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.properties import ObjectProperty, StringProperty
-from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.dialog import MDDialog
-from kivymd.uix.button import MDFlatButton
+from kivymd.app import MDApp
 from dad_player.constants import LAYOUT_BREAKPOINT
-from dad_player.core.exceptions import MetadataUpdateError
 
 log = logging.getLogger(__name__)
+
+IS_WIN = sys.platform == 'win32'
+if IS_WIN:
+    try:
+        import win32api
+        import win32con
+        import win32gui
+    except ImportError:
+        log.warning("pywin32 is not installed. Maximize functionality will be limited.")
+        IS_WIN = False
+
 
 class MainScreen(MDScreen):
     player_engine = ObjectProperty(None)
@@ -26,8 +34,188 @@ class MainScreen(MDScreen):
         self._current_layout = None
         self._is_initialized = False
         self.current_sub_view = "library_screen"
-        super().__init__(**kwargs)
         
+        # --- WINDOW MANAGEMENT STATE VARIABLES ---
+        self._is_dragging = False
+        self._is_maximized = False
+        self._old_window_pos = None
+        self._old_window_size = None
+        self._resize_direction = None
+        self.RESIZE_BORDER = 15
+
+        super().__init__(**kwargs)
+
+    def on_touch_down(self, touch):
+        if self._is_maximized:
+            if self.ids.title_bar.collide_point(*touch.pos) and touch.is_double_tap:
+                self.toggle_maximize_window()
+                return True
+            return super().on_touch_down(touch)
+
+        x, y = touch.pos
+        width, height = Window.size
+        border = self.RESIZE_BORDER
+
+        on_left = x < border
+        on_right = x > width - border
+        on_bottom = y < border
+        on_top = y > height - border
+
+        if on_left and on_top: self._resize_direction = 'top-left'
+        elif on_right and on_top: self._resize_direction = 'top-right'
+        elif on_left and on_bottom: self._resize_direction = 'bottom-left'
+        elif on_right and on_bottom: self._resize_direction = 'bottom-right'
+        elif on_left: self._resize_direction = 'left'
+        elif on_right: self._resize_direction = 'right'
+        elif on_bottom: self._resize_direction = 'bottom'
+        elif on_top: self._resize_direction = 'top'
+        else: self._resize_direction = None
+        
+        if self._resize_direction:
+            touch.grab(self)
+            return True
+        
+        title_bar = self.ids.get('title_bar')
+        if title_bar and title_bar.collide_point(*touch.pos):
+            is_on_button = False
+            for child in title_bar.children:
+                if hasattr(child, 'icon') and child.collide_point(*touch.pos):
+                    is_on_button = True
+                    break
+            
+            if not is_on_button:
+                if touch.is_double_tap:
+                    self.toggle_maximize_window()
+                    return True
+
+                self._is_dragging = True
+                touch.grab(self)
+                return True
+
+        return super().on_touch_down(touch)
+
+    def on_touch_move(self, touch):
+        if touch.grab_current is not self:
+            return super().on_touch_move(touch)
+
+        # --- RESIZE LOGIC ADDED ---
+        if self._resize_direction:
+            dx, dy = touch.dx, touch.dy
+            new_width, new_height = Window.size
+            
+            if 'left' in self._resize_direction:
+                Window.left += dx
+                new_width -= dx
+            if 'right' in self._resize_direction:
+                new_width += dx
+            if 'bottom' in self._resize_direction:
+                Window.top += dy
+                new_height -= dy
+            if 'top' in self._resize_direction:
+                new_height += dy
+            
+            Window.size = (new_width, new_height)
+            return True
+        if self._is_dragging:
+            Window.left += touch.dx
+            Window.top -= touch.dy
+            return True
+        # --- END MODIFIED ---
+        return super().on_touch_move(touch)
+
+    def on_touch_up(self, touch):
+        if touch.grab_current is self:
+            self._is_dragging = False
+            self._resize_direction = None
+            touch.ungrab(self)
+            return True
+        return super().on_touch_up(touch)
+
+    # --- HOVER & WINDOW CONTROL LOGIC ---
+    def bind_hover_events(self):
+        Window.bind(mouse_pos=self._check_hover)
+
+    def _check_hover(self, window, pos):
+        title_bar = self.ids.get('title_bar')
+        if title_bar:
+            button_ids = ['dashboard_button', 'minimize_button', 'maximize_button', 'close_button']
+            is_over_button = False
+            for button_id in button_ids:
+                button = self.ids.get(button_id)
+                if button:
+                    if button.collide_point(*button.to_local(*pos)):
+                        button.hovering = True
+                        is_over_button = True
+                    else:
+                        button.hovering = False
+        
+        if self._is_dragging or self._resize_direction:
+            return
+
+        if is_over_button:
+            Window.set_system_cursor('arrow')
+            return
+
+        x, y = pos
+        width, height = Window.size
+        border = self.RESIZE_BORDER
+
+        on_left = x < border
+        on_right = x > width - border
+        on_bottom = y < border
+        on_top = y > height - border
+
+        if (on_left and on_top) or (on_right and on_bottom):
+            Window.set_system_cursor('size_nwse')
+        elif (on_right and on_top) or (on_left and on_bottom):
+            Window.set_system_cursor('size_nesw')
+        elif on_left or on_right:
+            Window.set_system_cursor('size_we')
+        elif on_top or on_bottom:
+            Window.set_system_cursor('size_ns')
+        else:
+            Window.set_system_cursor('arrow')
+    
+    def _get_monitor_work_area(self):
+        if not IS_WIN:
+            return None
+        monitor = win32api.MonitorFromPoint((Window.left, Window.top), win32con.MONITOR_DEFAULTTONEAREST)
+        info = win32api.GetMonitorInfo(monitor)
+        return info.get("Work")
+
+    def close_window(self):
+        MDApp.get_running_app().stop()
+
+    def minimize_window(self):
+        Window.minimize()
+
+    def toggle_maximize_window(self):
+        if self._is_maximized:
+            if self._old_window_pos and self._old_window_size:
+                Window.left, Window.top = self._old_window_pos
+                Window.size = self._old_window_size
+            else:
+                Window.restore()
+            self._is_maximized = False
+        else:
+            self._old_window_pos = (Window.left, Window.top)
+            self._old_window_size = Window.size
+            if IS_WIN:
+                work_area = self._get_monitor_work_area()
+                if work_area:
+                    x, y, w, h = work_area
+                    Window.left = x
+                    Window.top = y
+                    Window.size = (w, h)
+                else:
+                    Window.maximize()
+            else:
+                Window.maximize()
+            self._is_maximized = True
+    
+    def open_dashboard(self):
+        print("Dashboard icon clicked!")
+
     def on_enter(self, *args):
         if not self._is_initialized:
             Clock.schedule_once(self._initialize_layout)
@@ -35,11 +223,14 @@ class MainScreen(MDScreen):
     def _initialize_layout(self, dt):
         log.debug("MainScreen: Performing first-time initialization.")
         self._populate_views()
-        
+
         if self.player_engine:
             self.player_engine.bind(on_media_loaded=self._update_top_bar_title)
-        
+
         Window.bind(on_resize=self.on_window_resize)
+        
+        self.bind_hover_events()
+
         self.update_layout(Window.width)
         self._is_initialized = True
 

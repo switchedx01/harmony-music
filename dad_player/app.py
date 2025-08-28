@@ -3,7 +3,6 @@
 import logging
 import os
 import sys
-import traceback
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.uix.label import Label
@@ -38,8 +37,8 @@ class DadPlayerApp(MDApp):
         self.player_engine = None
         self.screen_manager = None
         self.floating_widget = None
-        self.default_primary_palette = "BlueGray"
-        self.default_accent_palette = "Blue"
+        self.default_primary_palette = "Indigo"
+        self.default_accent_palette = "Orange"
 
     def build(self):
         self.icon = resource_path('assets/icons/harmony_player_icon.ico')
@@ -49,6 +48,8 @@ class DadPlayerApp(MDApp):
         self.theme_cls.primary_palette = self.default_primary_palette
         self.theme_cls.accent_palette = self.default_accent_palette
         self.title = f"{APP_NAME} v{APP_VERSION}"
+        
+        Window.clearcolor = self.theme_cls.bg_darkest
 
         try:
             self.settings_manager = SettingsManager()
@@ -97,9 +98,6 @@ class DadPlayerApp(MDApp):
         return self.screen_manager
     
     def _on_setting_changed(self, settings_manager_instance, key, value):
-        """
-        Acts as the central coordinator when a setting changes.
-        """
         if key == CONFIG_KEY_CONSOLIDATE_ALBUMS:
             log.info(f"'{key}' setting changed to '{value}'. Triggering library refresh.")
             try:
@@ -168,8 +166,10 @@ class DadPlayerApp(MDApp):
     def _on_media_loaded(self, instance, media_path, duration_ms):
         if not media_path:
             apply_theme_colors(self, self.default_primary_palette, self.default_accent_palette)
+            Window.clearcolor = self.theme_cls.bg_darkest
             return
 
         art_path = self.library_manager.get_album_art_path_for_file(media_path)
         theme = get_theme_colors_from_art(art_path)
         apply_theme_colors(self, theme['primary_color'], theme['accent_color'])
+        Window.clearcolor = self.theme_cls.primary_dark

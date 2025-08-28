@@ -1,23 +1,75 @@
 # dad_player/kv/main_screen.kv
 
+<HoverTitleBarButton@MDIconButton>:
+    # A reusable style for all title bar buttons except close.
+    hovering: False
+    md_bg_color: self.theme_cls.primary_color if self.hovering else [0, 0, 0, 0]
+    icon_color: [1, 1, 1, 1]
+    ripple_scale: 0
+
+<HoverCloseButton@HoverTitleBarButton>:
+    # A specific style for the close button for a different hover color.
+    md_bg_color: [0.8, 0.2, 0.2, 1] if self.hovering else [0, 0, 0, 0]
+
+
 <MainScreen>:
-    MDScreenManager:
-        id: layout_manager
+    MDBoxLayout:
+        orientation: 'vertical'
 
-        # --- DESKTOP LAYOUT SCREEN ---
-        MDScreen:
-            name: 'desktop_layout'
+        MDBoxLayout:
+            id: title_bar
+            size_hint_y: None
+            height: "40dp"
+            padding: "8dp"
+            spacing: "8dp"
+            canvas.before:
+                Color:
+                    rgba: app.theme_cls.bg_darkest
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
 
-            MDBoxLayout:
-                orientation: 'vertical'
+            MDLabel:
+                text: root.top_bar_title
+                halign: "left"
+                valign: "center"
+                size_hint_x: 1
 
-                MDTopAppBar:
-                    id: desktop_app_bar
-                    title: root.top_bar_title
-                    elevation: 4
-                    pos_hint: {"top": 1}
-                    anchor_title: "left"
-                    left_action_items: [["menu", lambda x: nav_drawer.set_state("open")]]
+            # --- WINDOW CONTROL BUTTONS ---
+            HoverTitleBarButton:
+                id: dashboard_button
+                icon: "view-dashboard-outline"
+                pos_hint: {"center_y": 0.5}
+                on_release: root.open_dashboard()
+                tooltip_text: "Dashboard"
+
+            HoverTitleBarButton:
+                id: minimize_button
+                icon: "window-minimize"
+                pos_hint: {"center_y": 0.5}
+                on_release: root.minimize_window()
+                tooltip_text: "Minimize"
+
+            HoverTitleBarButton:
+                id: maximize_button
+                icon: "window-maximize"
+                pos_hint: {"center_y": 0.5}
+                on_release: root.toggle_maximize_window()
+                tooltip_text: "Maximize"
+
+            HoverCloseButton:
+                id: close_button
+                icon: "close"
+                pos_hint: {"center_y": 0.5}
+                on_release: root.close_window()
+                tooltip_text: "Close"
+
+        MDScreenManager:
+            id: layout_manager
+
+            # --- DESKTOP LAYOUT SCREEN ---
+            MDScreen:
+                name: 'desktop_layout'
 
                 MDBoxLayout:
                     orientation: 'horizontal'
@@ -43,6 +95,12 @@
 
                     MDScreenManager:
                         id: desktop_screen_manager
+                        canvas.before:
+                            Color:
+                                rgba: app.theme_cls.bg_darkest
+                            Rectangle:
+                                pos: self.pos
+                                size: self.size
                         MDScreen:
                             name: 'now_playing_screen'
                         MDScreen:
@@ -50,45 +108,36 @@
                         MDScreen:
                             name: 'playlist_screen'
 
-        # --- MOBILE LAYOUT SCREEN ---
-        MDScreen:
-            name: 'mobile_layout'
+            # --- MOBILE LAYOUT SCREEN ---
+            MDScreen:
+                name: 'mobile_layout'
 
-            MDBoxLayout:
-                orientation: 'vertical'
+                MDBoxLayout:
+                    orientation: 'vertical'
 
-                MDTopAppBar:
-                    id: mobile_app_bar
-                    title: root.top_bar_title
-                    elevation: 4
-                    pos_hint: {"top": 1}
-                    anchor_title: "center"
-                    left_action_items: [["menu", lambda x: nav_drawer.set_state("open")]]
-                    right_action_items: [["blank", lambda x: None]]
+                    MDBottomNavigation:
+                        id: bottom_nav
+                        selected_color_background: app.theme_cls.primary_color
+                        panel_color: app.theme_cls.bg_dark
+                        on_switch_tabs: root.on_switch_tabs(*args)
 
-                MDBottomNavigation:
-                    id: bottom_nav
-                    selected_color_background: app.theme_cls.primary_color
-                    panel_color: app.theme_cls.bg_dark
-                    on_switch_tabs: root.on_switch_tabs(*args)
+                        MDBottomNavigationItem:
+                            name: 'now_playing_screen'
+                            text: 'Playing'
+                            icon: 'play'
+                            id: mobile_now_playing_screen
 
-                    MDBottomNavigationItem:
-                        name: 'now_playing_screen'
-                        text: 'Playing'
-                        icon: 'play'
-                        id: mobile_now_playing_screen
+                        MDBottomNavigationItem:
+                            name: 'library_screen'
+                            text: 'Library'
+                            icon: 'music-box-multiple'
+                            id: mobile_library_screen
 
-                    MDBottomNavigationItem:
-                        name: 'library_screen'
-                        text: 'Library'
-                        icon: 'music-box-multiple'
-                        id: mobile_library_screen
-
-                    MDBottomNavigationItem:
-                        name: 'playlist_screen'
-                        text: 'Playlist'
-                        icon: 'playlist-music-outline'
-                        id: mobile_playlist_screen
+                        MDBottomNavigationItem:
+                            name: 'playlist_screen'
+                            text: 'Playlist'
+                            icon: 'playlist-music-outline'
+                            id: mobile_playlist_screen
 
     MDNavigationDrawer:
         id: nav_drawer

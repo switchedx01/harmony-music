@@ -6,13 +6,14 @@ from logging_config import setup_logging
 
 from kivy.config import Config
 Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+Config.set('graphics', 'borderless', '1')
+Config.set('graphics', 'resizable', '1')
 
 # --- Logging Setup ---
 setup_logging()
 
 # --- PyInstaller Path Helper ---
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
         base_path = sys._MEIPASS
     except Exception:
