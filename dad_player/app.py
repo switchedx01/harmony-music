@@ -9,7 +9,7 @@ from kivy.lang import Builder
 from kivy.uix.label import Label
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
-from dad_player.constants import APP_NAME, APP_VERSION
+from dad_player.constants import APP_NAME, APP_VERSION, CONFIG_KEY_CONSOLIDATE_ALBUMS
 from dad_player.core.exceptions import VlcInitializationError
 from dad_player.core.library_manager import LibraryManager
 from dad_player.core.player_engine import PlayerEngine
@@ -52,6 +52,7 @@ class DadPlayerApp(MDApp):
 
         try:
             self.settings_manager = SettingsManager()
+            self.settings_manager.bind(on_setting_changed=self._on_setting_changed)
             self.playlist_manager = PlaylistManager()
             self.library_manager = LibraryManager(settings_manager=self.settings_manager)
             self.player_engine = PlayerEngine(
@@ -95,6 +96,19 @@ class DadPlayerApp(MDApp):
         Window.bind(on_touch_down=self.on_window_touch_down)
         return self.screen_manager
     
+    def _on_setting_changed(self, settings_manager_instance, key, value):
+        """
+        Acts as the central coordinator when a setting changes.
+        """
+        if key == CONFIG_KEY_CONSOLIDATE_ALBUMS:
+            log.info(f"'{key}' setting changed to '{value}'. Triggering library refresh.")
+            try:
+                main_screen = self.screen_manager.get_screen('main_screen')
+                main_screen.refresh_visible_library_content()
+                log.info("Library refresh command sent successfully.")
+            except Exception as e:
+                log.error(f"Failed to refresh library view after setting change: {e}", exc_info=True)
+
     def on_window_touch_down(self, window, touch):
         if self.floating_widget and not self.floating_widget.collide_point(*touch.pos):
             self.floating_widget.dismiss()

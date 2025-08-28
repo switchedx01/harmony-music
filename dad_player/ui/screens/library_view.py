@@ -102,7 +102,8 @@ class LibraryView(MDBoxLayout):
             self.display_path_text = "All Albums"
             self.album_art_path = ""
             self.album_artist = ""
-            all_albums = self.library_manager.get_albums_by_artist(artist_id=None)
+            consolidate = self.settings_manager.get_consolidate_albums()
+            all_albums = self.library_manager.get_all_albums(consolidated=consolidate)
             data = [{
                 'album_name': a['name'], 'artist_name': a['artist_name'],
                 'art_path': a.get('art_path') or self._placeholder_art,
@@ -159,7 +160,17 @@ class LibraryView(MDBoxLayout):
             album_id = self.current_args['album_id']
             album_name = self.current_args['album_name']
             self.display_path_text = album_name
-            tracks = self.library_manager.get_tracks_by_album(album_id)
+            
+            consolidate = self.settings_manager.get_consolidate_albums()
+            is_from_consolidated_view = (self._navigation_stack and
+                                       self._navigation_stack[-1]['mode'] == 'all_albums' and
+                                       consolidate)
+
+            if is_from_consolidated_view:
+                tracks = self.library_manager.get_tracks_by_album_name(album_name)
+            else:
+                tracks = self.library_manager.get_tracks_by_album(album_id)
+
             if tracks:
                 self.album_art_path = self.library_manager.get_album_art_path_for_file(tracks[0]['filepath']) or self._placeholder_art
                 self.album_artist = tracks[0].get('artist_name', 'Unknown Artist')

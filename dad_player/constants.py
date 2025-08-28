@@ -40,6 +40,7 @@ CONFIG_KEY_SHUFFLE = "shuffle"
 CONFIG_KEY_REPEAT = "repeat_mode"
 CONFIG_KEY_LAST_VOLUME = "last_volume"
 CONFIG_KEY_REPLAYGAIN = "replaygain"
+CONFIG_KEY_CONSOLIDATE_ALBUMS = "consolidate_albums"
 
 # =============================================================================
 # Playback Modes

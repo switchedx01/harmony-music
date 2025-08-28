@@ -7,6 +7,7 @@ from kivy.storage.jsonstore import JsonStore
 
 from dad_player.constants import (
     CONFIG_KEY_AUTOPLAY,
+    CONFIG_KEY_CONSOLIDATE_ALBUMS,
     CONFIG_KEY_LAST_VOLUME,
     CONFIG_KEY_MUSIC_FOLDERS,
     CONFIG_KEY_REPLAYGAIN,
@@ -36,6 +37,7 @@ class SettingsManager(EventDispatcher):
             CONFIG_KEY_REPEAT: REPEAT_NONE,
             CONFIG_KEY_LAST_VOLUME: 0.75,
             CONFIG_KEY_REPLAYGAIN: False,
+            CONFIG_KEY_CONSOLIDATE_ALBUMS: False,
         }
         self._load_settings()
 
@@ -119,6 +121,12 @@ class SettingsManager(EventDispatcher):
     
     def set_replaygain(self, value: bool):
         self.put(CONFIG_KEY_REPLAYGAIN, bool(value))
+
+    def get_consolidate_albums(self) -> bool:
+        return self.get(CONFIG_KEY_CONSOLIDATE_ALBUMS)
+
+    def set_consolidate_albums(self, value: bool):
+        self.put(CONFIG_KEY_CONSOLIDATE_ALBUMS, bool(value))
 
     def on_setting_changed(self, key, value):
         pass

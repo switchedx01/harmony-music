@@ -358,6 +358,47 @@ class LibraryManager(EventDispatcher):
             cursor.execute("SELECT id, name FROM artists ORDER BY name COLLATE NOCASE")
             return [dict(row) for row in cursor.fetchall()]
 
+    def get_all_albums(self, consolidated=False):
+        """
+        Fetches all albums. If consolidated is True, groups albums by name.
+        """
+        with self._db_lock, self._get_db_connection() as conn:
+            cursor = conn.cursor()
+            if not consolidated:
+                cursor.execute("""
+                    SELECT al.id, al.name, al.year, al.art_filename, ar.name as artist_name
+                    FROM albums al LEFT JOIN artists ar ON al.artist_id = ar.id
+                    ORDER BY al.name COLLATE NOCASE
+                """)
+            else:
+                # This query groups by album name, picks a representative ID and art,
+                # and labels the artist as 'Various Artists' if multiple artists are involved.
+                cursor.execute("""
+                    SELECT
+                        MIN(al.id) as id,
+                        al.name,
+                        MAX(al.year) as year,
+                        (SELECT art_filename FROM albums WHERE name = al.name AND art_filename IS NOT NULL LIMIT 1) as art_filename,
+                        CASE
+                            WHEN COUNT(DISTINCT al.artist_id) > 1 THEN 'Various Artists'
+                            ELSE MAX(ar.name)
+                        END as artist_name
+                    FROM albums al
+                    LEFT JOIN artists ar ON al.artist_id = ar.id
+                    GROUP BY al.name COLLATE NOCASE
+                    ORDER BY al.name COLLATE NOCASE
+                """)
+            
+            albums = []
+            for row in cursor.fetchall():
+                art_path = self.art_cache_dir / row["art_filename"] if row["art_filename"] else None
+                albums.append({
+                    "id": row["id"], "name": row["name"], "year": row["year"],
+                    "artist_name": row["artist_name"] or "Unknown Artist",
+                    "art_path": str(art_path) if art_path and art_path.exists() else None
+                })
+            return albums
+
     def get_albums_by_artist(self, artist_id):
         with self._db_lock, self._get_db_connection() as conn:
             cursor = conn.cursor()
@@ -391,6 +432,18 @@ class LibraryManager(EventDispatcher):
                 FROM tracks t LEFT JOIN artists ar ON t.artist_id = ar.id
                 WHERE t.album_id = ? ORDER BY t.disc_number, t.track_number
             """, (album_id,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_tracks_by_album_name(self, album_name: str):
+        with self._db_lock, self._get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT t.id, t.filepath, t.title, t.track_number, t.disc_number, t.duration, ar.name as artist_name
+                FROM tracks t
+                LEFT JOIN artists ar ON t.artist_id = ar.id
+                JOIN albums al ON t.album_id = al.id
+                WHERE al.name = ? ORDER BY t.disc_number, t.track_number
+            """, (album_name,))
             return [dict(row) for row in cursor.fetchall()]
 
     def search_tracks(self, query: str):
