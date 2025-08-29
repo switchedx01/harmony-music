@@ -16,7 +16,6 @@ from dad_player.core.settings_manager import SettingsManager
 from dad_player.ui.screens.main_screen import MainScreen
 from dad_player.ui.screens.settings_screen import SettingsScreen
 from dad_player.ui.screens.track_details_view import TrackDetailsView
-from dad_player.utils.color_utils import get_theme_colors_from_art, apply_theme_colors
 from dad_player.core.playlist_manager import PlaylistManager
 
 log = logging.getLogger(__name__)
@@ -67,8 +66,6 @@ class DadPlayerApp(MDApp):
         except Exception as e:
             log.critical(f"An unexpected error occurred during initialization: {e}", exc_info=True)
             return Label(text=f"An unexpected error occurred:\n{e}", halign="center")
-
-        self.player_engine.bind(on_media_loaded=self._on_media_loaded)
 
         self._load_kv_files()
         self.screen_manager = MDScreenManager()
@@ -162,14 +159,3 @@ class DadPlayerApp(MDApp):
             self.player_engine.shutdown()
         if self.library_manager:
             self.library_manager.close()
-
-    def _on_media_loaded(self, instance, media_path, duration_ms):
-        if not media_path:
-            apply_theme_colors(self, self.default_primary_palette, self.default_accent_palette)
-            Window.clearcolor = self.theme_cls.bg_darkest
-            return
-
-        art_path = self.library_manager.get_album_art_path_for_file(media_path)
-        theme = get_theme_colors_from_art(art_path)
-        apply_theme_colors(self, theme['primary_color'], theme['accent_color'])
-        Window.clearcolor = self.theme_cls.primary_dark

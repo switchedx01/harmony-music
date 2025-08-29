@@ -8,6 +8,7 @@ from kivy.properties import ObjectProperty, StringProperty
 from kivymd.uix.screen import MDScreen
 from kivymd.app import MDApp
 from dad_player.constants import LAYOUT_BREAKPOINT
+from dad_player.utils.color_utils import get_theme_colors_from_art, apply_theme_colors
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +36,6 @@ class MainScreen(MDScreen):
         self._is_initialized = False
         self.current_sub_view = "library_screen"
         
-        # --- WINDOW MANAGEMENT STATE VARIABLES ---
         self._is_dragging = False
         self._is_maximized = False
         self._old_window_pos = None
@@ -98,7 +98,6 @@ class MainScreen(MDScreen):
         if touch.grab_current is not self:
             return super().on_touch_move(touch)
 
-        # --- RESIZE LOGIC ADDED ---
         if self._resize_direction:
             dx, dy = touch.dx, touch.dy
             new_width, new_height = Window.size
@@ -120,7 +119,6 @@ class MainScreen(MDScreen):
             Window.left += touch.dx
             Window.top -= touch.dy
             return True
-        # --- END MODIFIED ---
         return super().on_touch_move(touch)
 
     def on_touch_up(self, touch):
@@ -131,7 +129,6 @@ class MainScreen(MDScreen):
             return True
         return super().on_touch_up(touch)
 
-    # --- HOVER & WINDOW CONTROL LOGIC ---
     def bind_hover_events(self):
         Window.bind(mouse_pos=self._check_hover)
 
@@ -225,7 +222,7 @@ class MainScreen(MDScreen):
         self._populate_views()
 
         if self.player_engine:
-            self.player_engine.bind(on_media_loaded=self._update_top_bar_title)
+            self.player_engine.bind(on_media_loaded=self._on_new_media_loaded)
 
         Window.bind(on_resize=self.on_window_resize)
         
@@ -251,12 +248,53 @@ class MainScreen(MDScreen):
             else:
                 log.error("CRITICAL: 'layout_manager' not found in ids. UI cannot switch layouts.")
 
-    def _update_top_bar_title(self, instance, media_path, duration_ms):
+    def _on_new_media_loaded(self, instance, media_path, duration_ms):
+        """
+        This is the central trigger for all theme updates.
+        """
         if media_path:
             track_meta = self.library_manager.get_track_details_by_filepath(media_path)
             self.top_bar_title = track_meta.get('title', "Unknown Title")
+            
+            art_path = self.library_manager.get_album_art_path_for_file(media_path)
+            self._update_theme_from_art(art_path)
         else:
             self.top_bar_title = "Harmony Player"
+            self._update_theme_from_art(None)
+
+    def _update_theme_from_art(self, art_path):
+        """
+        Coordinates the entire theme update process.
+        """
+        app = MDApp.get_running_app()
+        theme_dict = get_theme_colors_from_art(art_path)
+        apply_theme_colors(app, theme_dict)
+        
+        Clock.schedule_once(self.update_theme_dependent_colors)
+
+    def update_theme_dependent_colors(self, *args):
+        """
+        This function is called whenever the theme changes.
+        It commands all child views to update their own colors.
+        """
+        log.debug("MainScreen: Broadcasting theme update to all child views.")
+        theme_cls = MDApp.get_running_app().theme_cls
+
+        for view in self._views.values():
+            if hasattr(view, 'update_theme_colors'):
+                view.update_theme_colors()
+
+        if self._current_layout == 'mobile' and 'bottom_nav' in self.ids:
+            bottom_nav = self.ids.bottom_nav
+            bottom_nav.selected_color_background = theme_cls.primary_color
+            
+            if hasattr(bottom_nav, 'ids') and 'tabs_bar' in bottom_nav.ids:
+                for tab in bottom_nav.ids.tabs_bar.children:
+                    tab.text_color_active = theme_cls.primary_color
+        
+        if self._current_layout == 'desktop' and 'nav_rail' in self.ids:
+            nav_rail = self.ids.nav_rail
+            nav_rail.selected_color_background = theme_cls.primary_color
 
     def _populate_views(self):
         if self._views:

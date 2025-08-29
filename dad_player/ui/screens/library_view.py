@@ -8,8 +8,7 @@ from kivy.properties import (
 )
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.metrics import dp
-
-# Imports for the widget viewclasses used by the RecycleView.
+from kivymd.app import MDApp
 from dad_player.ui.widgets.album_grid_item import AlbumGridItem
 from dad_player.ui.widgets.artist_list_item import ArtistListItem
 from dad_player.ui.widgets.song_list_item import SongListItem, SongRowItem
@@ -360,3 +359,14 @@ class LibraryView(MDBoxLayout):
     def show_song_context_menu(self, track_path):
         """Shows the context menu for a song."""
         log.info(f"Context menu requested for: {track_path}")
+
+    def update_theme_colors(self):
+        """Called by MainScreen to force a color refresh."""
+        log.debug("LibraryView: Updating theme-dependent colors.")
+        app = MDApp.get_running_app()
+        theme_cls = app.theme_cls
+        
+        if 'cycle_view_button' in self.ids:
+            self.ids.cycle_view_button.md_bg_color = theme_cls.primary_color
+        if 'scan_button' in self.ids:
+            self.ids.scan_button.md_bg_color = theme_cls.primary_color

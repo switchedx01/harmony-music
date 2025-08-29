@@ -50,8 +50,6 @@ class NowPlayingView(MDBoxLayout):
         super().__init__(**kwargs)
         Clock.schedule_once(self._post_init)
 
-    # --- functions ---
-
     def on_touch_down(self, touch):
         album_art_card = self.ids.get('album_art_card')
         if album_art_card and album_art_card.collide_point(*touch.pos):
@@ -65,13 +63,9 @@ class NowPlayingView(MDBoxLayout):
         if hasattr(app, 'floating_widget') and app.floating_widget:
             app.floating_widget.dismiss()
         
-        # CORRECTED: Pass the names of the methods as strings.
-        # This allows EnlargedAlbumArt to use its own internal methods.
         menu_items = [
             {'icon': 'playlist-plus', 'callback': 'add_to_playlist'},
-            # {'icon': 'account-music', 'callback': 'view_artist'}, # Placeholder removed
-            # {'icon': 'album', 'callback': 'view_album'}, # Placeholder removed
-            {'icon': 'information-outline', 'callback': 'show_details'}, # This is the key change
+            {'icon': 'information-outline', 'callback': 'show_details'},
         ]
 
         art_widget = EnlargedAlbumArt(
@@ -235,8 +229,33 @@ class NowPlayingView(MDBoxLayout):
 
     def _on_shuffle_mode_changed(self, instance, shuffle_enabled):
         self.shuffle_enabled = shuffle_enabled
+        self.update_theme_colors()
 
     def _on_repeat_mode_changed(self, instance, repeat_mode):
         if repeat_mode == 0: self.repeat_mode_icon = "repeat-off"
         elif repeat_mode == 1: self.repeat_mode_icon = "repeat-once"
         else: self.repeat_mode_icon = "repeat"
+        self.update_theme_colors()
+        
+    def update_theme_colors(self):
+        """Called by MainScreen to force a color refresh."""
+        log.debug("NowPlayingView: Updating theme-dependent colors.")
+        app = MDApp.get_running_app()
+        theme_cls = app.theme_cls
+        
+        if 'progress_slider' in self.ids:
+            self.ids.progress_slider.color = theme_cls.primary_color
+        if 'volume_slider' in self.ids:
+            self.ids.volume_slider.color = theme_cls.primary_color
+            self.ids.volume_slider.thumb_color_down = theme_cls.primary_color
+            self.ids.volume_slider.thumb_color_normal = theme_cls.primary_color
+        if 'shuffle_button' in self.ids:
+            self.ids.shuffle_button.icon_color = theme_cls.primary_color if self.shuffle_enabled else theme_cls.secondary_text_color
+        if 'repeat_button' in self.ids:
+            self.ids.repeat_button.icon_color = theme_cls.primary_color if self.repeat_mode_icon != 'repeat-off' else theme_cls.secondary_text_color
+        if 'play_pause_button' in self.ids:
+            self.ids.play_pause_button.theme_text_color = "Primary"
+        if 'previous_button' in self.ids:
+            self.ids.previous_button.theme_text_color = "Primary"
+        if 'next_button' in self.ids:
+            self.ids.next_button.theme_text_color = "Primary"

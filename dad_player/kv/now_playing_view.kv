@@ -26,8 +26,8 @@
 
         MDCard:
             id: album_art_card
-            radius: [24] # Changeable: Corner roundness of the art container
-            elevation: 12 # Changeable: Shadow depth of the art container
+            radius: [24]
+            elevation: 12
             md_bg_color: 0, 0, 0, 0.2
             padding: "12dp"
 
@@ -42,7 +42,7 @@
                         texture: root.album_art_texture
                         size: self.norm_image_size
                         pos: self.center_x - self.norm_image_size[0] / 2., self.center_y - self.norm_image_size[1] / 2.
-                        radius: [18] # Changeable: Corner roundness of the album art itself
+                        radius: [18]
 
 
     # --- Song Info Section ---
@@ -144,17 +144,22 @@
             spacing: "16dp"
 
             MDIconButton:
+                id: shuffle_button
                 icon: "shuffle-variant"
                 on_release: root.on_shuffle_button_press()
-                theme_text_color: "Primary" if root.shuffle_enabled else "Secondary"
+                theme_text_color: "Custom"
+                icon_color: root.theme_cls.primary_color if root.shuffle_enabled else root.theme_cls.secondary_text_color
                 icon_size: "28sp"
 
             MDIconButton:
+                id: previous_button
                 icon: "skip-previous"
                 on_release: root.on_previous_button_press()
                 icon_size: "40sp"
+                theme_text_color: "Primary"
 
             MDIconButton:
+                id: play_pause_button
                 icon: root.play_pause_icon_text
                 on_release: root.on_play_pause_button_press()
                 icon_size: "64sp"
@@ -162,14 +167,18 @@
                 theme_text_color: "Primary"
 
             MDIconButton:
+                id: next_button
                 icon: "skip-next"
                 on_release: root.on_next_button_press()
                 icon_size: "40sp"
+                theme_text_color: "Primary"
 
             MDIconButton:
+                id: repeat_button
                 icon: root.repeat_mode_icon
                 on_release: root.on_repeat_button_press()
-                theme_text_color: "Primary" if root.repeat_mode_icon != 'repeat-off' else "Secondary"
+                theme_text_color: "Custom"
+                icon_color: root.theme_cls.primary_color if root.repeat_mode_icon != 'repeat-off' else root.theme_cls.secondary_text_color
                 icon_size: "28sp"
 
         # --- Volume Slider ---

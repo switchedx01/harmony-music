@@ -9,6 +9,7 @@ from kivymd.uix.button import MDFlatButton
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.navigationrail import MDNavigationRailItem
+from kivymd.app import MDApp
 
 from dad_player.core.exceptions import PlaylistExistsError
 from dad_player.utils.formatting import format_duration
@@ -50,8 +51,6 @@ class PlaylistView(MDBoxLayout):
             
         self.select_playlist("Queue")
 
-    # --- Event Handlers for Core Components ---
-
     def _on_engine_playlist_changed(self, *args):
         if self.active_playlist_name == "Queue":
             self.refresh_active_view_content()
@@ -64,10 +63,7 @@ class PlaylistView(MDBoxLayout):
             log.debug(f"Content changed for active playlist '{playlist_name}', refreshing view.")
             self.refresh_active_view_content()
 
-    # --- UI Refresh Logic ---
-
     def refresh_playlist_names(self, *args):
-
         log.debug("--- Executing refresh_playlist_names ---")
         if not self.playlist_manager or not self.ids.get('nav_rail'):
             return
@@ -211,3 +207,14 @@ class PlaylistView(MDBoxLayout):
             buttons=[MDFlatButton(text="OK", on_release=lambda x: error_dialog.dismiss())]
         )
         error_dialog.open()
+        
+    def update_theme_colors(self):
+        """Called by MainScreen to force a color refresh."""
+        log.debug("PlaylistView: Updating theme-dependent colors.")
+        app = MDApp.get_running_app()
+        theme_cls = app.theme_cls
+        
+        if 'fab_add_playlist' in self.ids:
+            self.ids.fab_add_playlist.md_bg_color = theme_cls.primary_color
+        if 'nav_rail' in self.ids:
+            self.ids.nav_rail.selected_color_background = theme_cls.primary_color
