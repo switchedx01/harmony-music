@@ -4,13 +4,8 @@ Harmony is a simple, beautiful, and straightforward music player for Windows. It
 Current Version: 1.0.1-Beta
 
 <img width="484" height="840" alt="image" src="https://github.com/user-attachments/assets/25514536-cf37-4c63-ade6-ab0bd837b2d8" />
-<img width="1919" height="1033" alt="image" src="https://github.com/user-attachments/assets/4dba5353-06ed-45f1-83f4-25838d61a4b9" />
-
-
-
-
-<img width="484" height="840" alt="image" src="https://github.com/user-attachments/assets/25514536-cf37-4c63-ade6-ab0bd837b2d8" />
 <img width="1919" height="1032" alt="image" src="https://github.com/user-attachments/assets/85c9714e-f5cb-48d7-bd03-96516f992fca" />
+
 
 # Main Features
 
