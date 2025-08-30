@@ -1,10 +1,12 @@
 ## Harmony Music Player
 Harmony is a simple, beautiful, and straightforward music player for Windows. It's designed for a clean, no-gimmicks listening experience, focusing on what matters most: your music. The user interface dynamically adapts its colors to match the album art of the currently playing song, creating a seamless and immersive visual flow.
 
-Current Version: 1.0.1-Beta
+Current Version: 1.0.2-Beta
 
-<img width="484" height="840" alt="image" src="https://github.com/user-attachments/assets/25514536-cf37-4c63-ade6-ab0bd837b2d8" />
-<img width="1919" height="1032" alt="image" src="https://github.com/user-attachments/assets/85c9714e-f5cb-48d7-bd03-96516f992fca" />
+<img width="480" height="800" alt="image" src="https://github.com/user-attachments/assets/8843cd13-7341-4900-b927-0a43dfa5773f" />
+
+<img width="1920" height="1032" alt="image" src="https://github.com/user-attachments/assets/902e1774-7387-4053-96b5-77f44789dcc8" />
+
 
 
 # Main Features
