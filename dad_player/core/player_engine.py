@@ -38,6 +38,8 @@ class PlayerEngine(EventDispatcher):
         self._position_update_event = None
         self.shuffle_mode = self.settings_manager.get_shuffle()
         self.repeat_mode = self.settings_manager.get_repeat_mode()
+        self.vlc_instance = None
+        self.player = None
 
         try:
             instance_args = ["--no-video", "--quiet", "--no-metadata-network-access"]
@@ -82,7 +84,7 @@ class PlayerEngine(EventDispatcher):
         Clock.schedule_once(lambda dt: self.dispatch(event_name, *args), 0)
 
     def _on_vlc_state_change(self, event):
-        if self.player.is_playing():
+        if self.player and self.player.is_playing():
             self._start_position_updater()
         else:
             self._stop_position_updater()
@@ -121,6 +123,7 @@ class PlayerEngine(EventDispatcher):
 
     def _load_media(self, file_path: str, play_immediately: bool = False):
         log.debug(f"Inside _load_media for: {file_path}")
+        if not self.player: return
         self.stop()
         self.current_media_path = file_path
         self.current_song = file_path
@@ -147,7 +150,7 @@ class PlayerEngine(EventDispatcher):
             self.player.play()
 
     def play_pause_toggle(self):
-        if self.current_media_path:
+        if self.player and self.current_media_path:
             self.player.pause()
 
     def stop(self):
@@ -276,10 +279,21 @@ class PlayerEngine(EventDispatcher):
         log.info("Shutting down PlayerEngine.")
         self._stop_position_updater()
         if self.player:
-            self.player.stop()
-            self.player.release()
+            try:
+                state = self.player.get_state()
+                if state in (vlc.State.Playing, vlc.State.Paused, vlc.State.Buffering):
+                    self.player.stop()
+                self.player.release()
+            except Exception as e:
+                log.error(f"Error during player shutdown: {e}")
+            self.player = None
+
         if self.vlc_instance:
-            self.vlc_instance.release()
+            try:
+                self.vlc_instance.release()
+            except Exception as e:
+                log.error(f"Error during VLC instance shutdown: {e}")
+            self.vlc_instance = None
 
     def on_playback_state_change(self, *args): pass
     def on_position_changed(self, *args): pass
