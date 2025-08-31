@@ -9,6 +9,8 @@ from kivymd.uix.screen import MDScreen
 from kivymd.app import MDApp
 from dad_player.constants import LAYOUT_BREAKPOINT
 from dad_player.utils.color_utils import get_theme_colors_from_art, apply_theme_colors
+# Import the new hybrid window manager
+from dad_player.utils.window_manager import WindowManager
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +19,6 @@ if IS_WIN:
     try:
         import win32api
         import win32con
-        import win32gui
     except ImportError:
         log.warning("pywin32 is not installed. Maximize functionality will be limited.")
         IS_WIN = False
@@ -36,96 +37,26 @@ class MainScreen(MDScreen):
         self._is_initialized = False
         self.current_sub_view = "library_screen"
         
-        self._is_dragging = False
+        # --- NEW HYBRID SETUP ---
         self._is_maximized = False
         self._old_window_pos = None
         self._old_window_size = None
-        self._resize_direction = None
-        self.RESIZE_BORDER = 15
+        self.window_manager = WindowManager(self, resize_border=8)
 
         super().__init__(**kwargs)
 
     def on_touch_down(self, touch):
-        if self._is_maximized:
-            if self.ids.title_bar.collide_point(*touch.pos) and touch.is_double_tap:
-                self.toggle_maximize_window()
-                return True
-            return super().on_touch_down(touch)
-
-        x, y = touch.pos
-        width, height = Window.size
-        border = self.RESIZE_BORDER
-
-        on_left = x < border
-        on_right = x > width - border
-        on_bottom = y < border
-        on_top = y > height - border
-
-        if on_left and on_top: self._resize_direction = 'top-left'
-        elif on_right and on_top: self._resize_direction = 'top-right'
-        elif on_left and on_bottom: self._resize_direction = 'bottom-left'
-        elif on_right and on_bottom: self._resize_direction = 'bottom-right'
-        elif on_left: self._resize_direction = 'left'
-        elif on_right: self._resize_direction = 'right'
-        elif on_bottom: self._resize_direction = 'bottom'
-        elif on_top: self._resize_direction = 'top'
-        else: self._resize_direction = None
-        
-        if self._resize_direction:
-            touch.grab(self)
+        if self.window_manager.on_touch_down(touch):
             return True
-        
-        title_bar = self.ids.get('title_bar')
-        if title_bar and title_bar.collide_point(*touch.pos):
-            is_on_button = False
-            for child in title_bar.children:
-                if hasattr(child, 'icon') and child.collide_point(*touch.pos):
-                    is_on_button = True
-                    break
-            
-            if not is_on_button:
-                if touch.is_double_tap:
-                    self.toggle_maximize_window()
-                    return True
-
-                self._is_dragging = True
-                touch.grab(self)
-                return True
-
         return super().on_touch_down(touch)
 
     def on_touch_move(self, touch):
-        if touch.grab_current is not self:
-            return super().on_touch_move(touch)
-
-        if self._resize_direction:
-            dx, dy = touch.dx, touch.dy
-            new_width, new_height = Window.size
-            
-            if 'left' in self._resize_direction:
-                Window.left += dx
-                new_width -= dx
-            if 'right' in self._resize_direction:
-                new_width += dx
-            if 'bottom' in self._resize_direction:
-                Window.top += dy
-                new_height -= dy
-            if 'top' in self._resize_direction:
-                new_height += dy
-            
-            Window.size = (new_width, new_height)
-            return True
-        if self._is_dragging:
-            Window.left += touch.dx
-            Window.top -= touch.dy
+        if self.window_manager.on_touch_move(touch):
             return True
         return super().on_touch_move(touch)
 
     def on_touch_up(self, touch):
-        if touch.grab_current is self:
-            self._is_dragging = False
-            self._resize_direction = None
-            touch.ungrab(self)
+        if self.window_manager.on_touch_up(touch):
             return True
         return super().on_touch_up(touch)
 
@@ -134,9 +65,9 @@ class MainScreen(MDScreen):
 
     def _check_hover(self, window, pos):
         title_bar = self.ids.get('title_bar')
+        is_over_button = False
         if title_bar:
             button_ids = ['dashboard_button', 'minimize_button', 'maximize_button', 'close_button']
-            is_over_button = False
             for button_id in button_ids:
                 button = self.ids.get(button_id)
                 if button:
@@ -146,16 +77,13 @@ class MainScreen(MDScreen):
                     else:
                         button.hovering = False
         
-        if self._is_dragging or self._resize_direction:
-            return
-
         if is_over_button:
             Window.set_system_cursor('arrow')
             return
 
         x, y = pos
         width, height = Window.size
-        border = self.RESIZE_BORDER
+        border = self.window_manager.resize_border if self.window_manager else 8
 
         on_left = x < border
         on_right = x > width - border
@@ -202,8 +130,8 @@ class MainScreen(MDScreen):
                 if work_area:
                     x, y, w, h = work_area
                     Window.left = x
-                    Window.top = y
-                    Window.size = (w, h)
+                    Window.top = y 
+                    Window.size = (w - x, h - y)
                 else:
                     Window.maximize()
             else:
@@ -408,4 +336,4 @@ class MainScreen(MDScreen):
             if library_view and hasattr(library_view, "refresh_current_view"):
                 log.debug("Refreshing library content.")
                 library_view.refresh_current_view()
-        Clock.schedule_once(do_refresh, 0.05)
+
