@@ -55,7 +55,7 @@ def setup_logging():
 
     # === Configure Root Logger ===
     # We configure the main logger for your application namespace.
-    app_logger = logging.getLogger("dad_player")
+    app_logger = logging.getLogger("harmony_player")
     app_logger.setLevel(logging.DEBUG)
 
     # Prevent duplicate logs if this function is called more than once
@@ -65,7 +65,12 @@ def setup_logging():
     # === File Handler (No Color) ===
     try:
         # Use the same APPDATA directory as before
-        log_dir = os.path.join(os.environ.get('APPDATA'), 'HarmonyPlayer')
+        if os.name == 'nt':
+            base_dir = os.environ.get('APPDATA')
+        else:
+            base_dir = os.path.join(os.path.expanduser("~"), ".local", "share")
+        
+        log_dir = os.path.join(base_dir, 'HarmonyPlayer')
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
         

@@ -1,0 +1,260 @@
+# harmony_player/kv/main_screen.kv
+
+#:import SettingsScreen harmony_player.ui.screens.settings_screen.SettingsScreen
+#:import HoverTitleBarButton harmony_player.ui.screens.main_screen.HoverTitleBarButton
+
+<HoverTitleBarButton>:
+    # A reusable style for all title bar buttons except close.
+    hovering: False
+    md_bg_color: self.theme_cls.primary_color if self.hovering else [0, 0, 0, 0]
+    icon_color: [1, 1, 1, 1]
+    ripple_scale: 0
+
+<HoverCloseButton@HoverTitleBarButton>:
+    # A specific style for the close button for a different hover color.
+    md_bg_color: [0.8, 0.2, 0.2, 1] if self.hovering else [0, 0, 0, 0]
+
+
+<MobileNavItem@MDCard>:
+    orientation: 'vertical'
+    size_hint_y: 1
+    size_hint_x: 1
+    padding: "4dp"
+    spacing: "4dp"
+    elevation: 0
+    radius: [16,]
+    md_bg_color: self.theme_cls.primary_color if self.active else [0, 0, 0, 0]
+    on_release: app.root.get_screen('main_screen').switch_view(root.screen_name)
+    active: False
+    screen_name: ""
+    icon: ""
+    text: ""
+    ripple_behavior: True
+
+    MDIcon:
+        icon: root.icon
+        halign: "center"
+        pos_hint: {"center_x": .5}
+        theme_text_color: "Custom"
+        text_color: [1, 1, 1, 1] if root.active else self.theme_cls.text_color
+
+    MDLabel:
+        text: root.text
+        halign: "center"
+        font_style: "Caption"
+        theme_text_color: "Custom"
+        text_color: [1, 1, 1, 1] if root.active else self.theme_cls.text_color
+        size_hint_y: None
+        height: self.texture_size[1]
+
+
+<MainScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        MDBoxLayout:
+            id: title_bar
+            size_hint_y: None
+            height: "40dp"
+            padding: "8dp"
+            spacing: "8dp"
+            canvas.before:
+                Color:
+                    rgba: app.theme_cls.bg_darkest
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            # --- DRAG HANDLE (Text Area) ---
+            MDBoxLayout:
+                id: drag_handle
+                orientation: 'horizontal'
+                # Takes remaining space
+                size_hint_x: 1
+                
+                MDLabel:
+                    text: root.top_bar_title
+                    halign: "left"
+                    valign: "center"
+                    size_hint_x: 1
+
+            # --- WINDOW CONTROL BUTTONS (Not Draggable) ---
+            MDBoxLayout:
+                orientation: 'horizontal'
+                adaptive_width: True
+                spacing: "8dp"
+
+                HoverTitleBarButton:
+                    id: settings_button
+                    icon: "cog"
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.switch_view("settings_screen")
+                    tooltip_text: "Settings"
+
+                HoverTitleBarButton:
+                    id: dashboard_button
+                    icon: "view-dashboard-outline"
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.open_dashboard()
+                    tooltip_text: "Dashboard"
+
+                HoverTitleBarButton:
+                    id: minimize_button
+                    icon: "window-minimize"
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.minimize_window()
+                    tooltip_text: "Minimize"
+
+                HoverTitleBarButton:
+                    id: maximize_button
+                    icon: "window-maximize"
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.toggle_maximize_window()
+                    tooltip_text: "Maximize"
+
+                HoverCloseButton:
+                    id: close_button
+                    icon: "close"
+                    pos_hint: {"center_y": 0.5}
+                    on_release: root.close_window()
+                    tooltip_text: "Close"
+
+        MDScreenManager:
+            id: layout_manager
+
+            # --- DESKTOP LAYOUT SCREEN ---
+            MDScreen:
+                name: 'desktop_layout'
+
+                MDBoxLayout:
+                    orientation: 'horizontal'
+
+                MDBoxLayout:
+                    orientation: 'horizontal'
+
+                    # Custom Sidebar (Replaces MDNavigationRail)
+                    MDBoxLayout:
+                        id: nav_rail
+                        orientation: 'vertical'
+                        size_hint_x: None
+                        width: "80dp"
+                        padding: "4dp"
+                        spacing: "4dp"
+                        md_bg_color: app.theme_cls.bg_dark
+                        
+                        # Navigation Items
+                        MobileNavItem: 
+                            text: "Playing"
+                            icon: "play-circle-outline"
+                            screen_name: "now_playing_screen"
+                            on_release: root.switch_view("now_playing_screen")
+                            height: "70dp"
+                            size_hint_y: None
+                            
+                        MobileNavItem:
+                            text: "Library"
+                            icon: "music-box-multiple"
+                            screen_name: "library_screen"
+                            on_release: root.switch_view("library_screen")
+                            height: "70dp"
+                            size_hint_y: None
+
+                        MobileNavItem:
+                            text: "Playlist"
+                            icon: "playlist-music-outline"
+                            screen_name: "playlist_screen"
+                            on_release: root.switch_view("playlist_screen")
+                            height: "70dp"
+                            size_hint_y: None
+
+                        MDWidget:
+                            # Spacer
+                            size_hint_y: 1
+
+                    MDScreenManager:
+                        id: desktop_screen_manager
+                        canvas.before:
+                            Color:
+                                rgba: app.theme_cls.bg_darkest
+                            Rectangle:
+                                pos: self.pos
+                                size: self.size
+                        MDScreen:
+                            name: 'now_playing_screen'
+                        MDScreen:
+                            name: 'library_screen'
+                        MDScreen:
+                            name: 'playlist_screen'
+                        SettingsScreen:
+                            name: 'settings_screen'
+                            settings_manager: app.settings_manager
+                            library_manager: app.library_manager
+                            player_engine: app.player_engine
+
+            # --- MOBILE LAYOUT SCREEN ---
+            MDScreen:
+                name: 'mobile_layout'
+
+                MDBoxLayout:
+                    orientation: 'vertical'
+
+                    MDScreenManager:
+                        id: mobile_screen_manager
+                        MDScreen:
+                            name: 'now_playing_screen'
+                            id: mobile_now_playing_screen
+                        MDScreen:
+                            name: 'library_screen'
+                            id: mobile_library_screen
+                        MDScreen:
+                            name: 'playlist_screen'
+                            id: mobile_playlist_screen
+                        SettingsScreen:
+                            name: 'settings_screen'
+                            id: mobile_settings_screen
+                            settings_manager: app.settings_manager
+                            library_manager: app.library_manager
+                            player_engine: app.player_engine
+
+                    MDBoxLayout:
+                        id: bottom_nav
+                        orientation: 'horizontal'
+                        size_hint_y: None
+                        height: "72dp"
+                        padding: "8dp"
+                        spacing: "8dp"
+                        md_bg_color: app.theme_cls.bg_dark
+                        
+                        MobileNavItem:
+                            id: nav_playing
+                            text: "Playing"
+                            icon: "play-circle-outline"
+                            screen_name: "now_playing_screen"
+                            
+                        MobileNavItem:
+                            id: nav_library
+                            text: "Library"
+                            icon: "music-box-multiple"
+                            screen_name: "library_screen"
+                            
+                        MobileNavItem:
+                            id: nav_playlist
+                            text: "Playlist"
+                            icon: "playlist-music-outline"
+                            screen_name: "playlist_screen"
+
+    MDNavigationDrawer:
+        id: nav_drawer
+        enable_swiping: False
+        MDNavigationDrawerMenu:
+            MDNavigationDrawerHeader:
+                title: "Harmony Player"
+                spacing: "4dp"
+                padding: "12dp", 0, 0, "32dp"
+
+            MDNavigationDrawerItem:
+                icon: "cog"
+                text: "Settings"
+                on_release:
+                    nav_drawer.set_state("close")
+                    app.switch_screen('settings_screen')
